@@ -1,0 +1,8 @@
+---
+Checks:          '-fix,-checks=google-*,clang-analyzer-*'
+WarningsAsErrors: ''
+HeaderFilterRegex: '^((?!/cpp/lib/).)*$'
+AnalyzeTemporaryDtors: false
+FormatStyle:     none
+User:            andres
+CheckOptions:
