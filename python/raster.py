@@ -29,13 +29,21 @@
 
 import sys
 import argparse
+from enum import Enum
 import numpy as np
 import scipy.io as io
 import time
 import matplotlib.pyplot as plt
 from raster_util import build_args
+from typing import List
 
 #REFACTORY_PERIOD_MS = 2 # time that must pass before a neuron fires again in milliseconds
+
+class SpikeDistribution(Enum):
+    EXP = 0
+    GAMMA = 1
+    POISSON = 2
+
 
 def maskPad(array=None, max_len=0):
     """
@@ -78,7 +86,12 @@ def plotISIH(spike_trains, duration, show_plots):
         plt.ylabel('# spikes')
         plt.draw()
 
-def plotPSTH(spike_trains, duration, bin_size, show_plots):
+def plotPSTH(
+    spike_trains: np.ndarray,
+    duration: int,
+    bin_size: int,
+    show_plots=False
+) -> None:
     """
     PlotPSTH creates a histogram of the binned spike counts
     from neurons modeled by the Poisson process for a given bin size.
@@ -87,18 +100,23 @@ def plotPSTH(spike_trains, duration, bin_size, show_plots):
     duration: units of milliseconds
     bin_size: units of milliseconds
     """
-    numTrials = len(spike_trains)
+    num_trials = len(spike_trains)
     start = 0
     sentinel = start + bin_size
     idx = 0;
     spike_counts = np.zeros(int(duration/bin_size), dtype=int)
 
     while (sentinel < duration):
-        for trial in range(0, numTrials):
-            spike_counts[idx] = spike_counts[idx] +  np.where(np.logical_and(spike_trains[trial] >= start, spike_trains[trial] < sentinel))[0].size # find all values between start and stop for this trial
+        for trial in range(0, num_trials):
+            # find all values between start and stop for this trial
+            spike_counts[idx] += \
+                np.where(
+                    np.logical_and(
+                        spike_trains[trial] > start, spike_trains[trial] <= sentinel)
+                    )[0].size
 
         # now we'll take the average for this bin across all trials and increment our counters
-        spike_counts[idx] = spike_counts[idx] / (bin_size * (10**(-3)) * numTrials)
+        spike_counts[idx] = spike_counts[idx] / (bin_size * (10**(-3)) * num_trials)
         start = start + bin_size
         sentinel = start + bin_size
         idx = idx + 1
@@ -110,51 +128,49 @@ def plotPSTH(spike_trains, duration, bin_size, show_plots):
         plt.ylabel("avg spike count")
         plt.draw()
 
-def generateRaster(
-    spike_rate=50, 
-    duration=2000, 
-    num_trains=10, 
-    distribution=None, 
-    k=2,
+def generate_rasters(
+    spike_rates: List[float], # spikes/s
+    intervals: List[int],     # ms
+    num_trains: int,
+    distribution: SpikeDistribution,
+    k=None,              # the scaling factor (1 / k!) of the gamma random distribution
     show_plots=False
-):
+) -> np.ndarray:
     """
     The following generates and returns spike rasters by using
     delta-t from a random exponential distribution characterized by...
-
-    spike_rate: rate in spikes/s
-    duration: duration of the spike raster in milliseconds
-    num_trains: the number of spike rasters to generate
-    distribution: random distribution choice, for now either exponential or gamma
-    k: for the scaling factor (1 / k!) of the gamma random distribution
     """
-    spike_trains = []
-    scale = 1000 / spike_rate # beta = 1  / lambda
-    shape = k + 1
+    # TODO: Provide rand_func as a parameter
+    betas = [1000 / r for r in spike_rates] # beta = 1  / lambda
+    if distribution == SpikeDistribution.EXP:
+        rand_func = lambda beta: int(np.random.exponential(beta))
+    elif distribution == SpikeDistribution.GAMMA:
+        assert k is not None
+        shape = k + 1
+        rand_func = lambda beta: int(np.random.exponential(shape, beta))
+    elif distribution == SpikeDistribution.POISSON:
+        rng = np.random.default_rng()
+        rand_func = lambda beta: int(rng.poisson(beta))
+    else:
+        raise ValueError(f"Distribution {distribution} not implemented!")
 
     start_time = time.time()
-
+    spike_trains = []
     for i in range(0, num_trains):
-        spikeTime = 0
         spike_train = []
-        dTime = 0
-
-        while(1):
-            if distribution == "exp":
-                dTime = int(np.random.exponential(scale))
-            elif distribution == "gamma":
-                dTime = int(np.random.gamma(shape, scale))
-
-            spikeTime = spikeTime + dTime
-            if spikeTime < duration:                        # append if we're still under the duration, otherwise break out
-                spike_train.append(spikeTime)
-            else:
-                break
-
+        prev_t_spike = 0
+        dt = 0
+        duration = sum(intervals)
+        for beta, interval in zip(betas, intervals):
+            while dt <= duration and (dt - prev_t_spike) <= interval:
+                dt += rand_func(beta)
+                spike_train.append(dt)
+            # because we always go over by one sample
+            prev_t_spike = dt
         spike_trains.append(np.asfortranarray(spike_train))
 
     elapsed_time = time.time() - start_time
-    print(str(elapsed_time) + " seconds")
+    print(f"Generated in {elapsed_time} seconds")
 
     if show_plots:
         plt.figure(1)
@@ -165,48 +181,54 @@ def generateRaster(
 
     return spike_trains
 
-def planTuningCurve(dirs=None, rates=None):
+def plan_tuning_curve(dirs: np.array, rates: np.array, show_plots=False) -> List[float]:
     """
-    planTuningCurve takes an array of average firing rates of a neuron
+    Takes an array of average firing rates of a neuron
     during a reach to dirs[0] degrees, dirs[1] degrees, and so on.
     It computes the tuning model, f(theta) = c0 + c1 cos(theta - theta0).
-    (restricted to 3 reach directions for now)
 
-    the outputs, c0, c1, and theta0 are the parameters of the tuning model.
+    The outputs, c0, c1, and theta0 are the parameters of the tuning model.
 
-    big picture: this needs to be computed for every sensor.
+    big picture: the cosine tuning model asserts
+    this needs to be computed for every sensor:
 
     f(theta) = c0 + c1*cos(theta - theta0)
 
-    considering:
+    Considering:
     --> cos(theta - theat0) = cos(theta)*cos(theta0) + sin(theta)*sin(theta0)
 
-    to simplify parameter estimation:
+    To simplify parameter estimation:
     --> f(theta) = k0 + k1*sin(theta) + k2*cos(theta)
 
-    TODO: when there are 3+ reach angles, the system is overdetermined.
-    in other words there are more equations than k's to solve for.
-    in that situation we'd have to solve for k's that minimize the
-    mean square error. will probably end up implementing this in C when the time comes.
+
+    Given a column vector of size M for measured rates.
+
+    [              [                                   [
+     rate1          1  sin(theta1)  cos(theta1)         k0
+     rate2          1  sin(theta2)  cos(theta2)         k1
+     ...      =     ...                            .    k2
+     rateM          1  sin(thetaM)  cos(thetaM)        ]
+    ]              ]
+
+    Solving for vector k with least error
+
     """
-    # find the values of the k's
-    k0 = np.mean(rates)
-    k1 = 1/np.sqrt(3) * (rates[1] - rates[2])
-    k2 = 2*rates[0]/3 - (rates[1] - rates[2])/3
 
-    # find the values of the c's
-    theta0 = np.arctan(k1 / k2)
-    c0 = k0
-    c1 = k1 / np.sin(theta0)
 
-    # x and y values...
-    theta = np.linspace(0 ,2*np.pi, 80)
-    firing_rates = c0 + c1*np.cos(theta - theta0)
+    rads = np.radians(dirs)
+    A = np.hstack((
+        np.ones((3, 1), order='F'), np.sin(rads), np.cos(rads)
+    ))
+    k = np.linalg.lstsq(A, rates, rcond=None)[0]
 
-    if showPlots:
+    theta = np.linspace(0, 2*np.pi, 80)
+    exp_firing_rates = k[0][0] + k[1][0]*np.sin(theta) + k[2][0]*np.cos(theta)
+
+
+    if show_plots:
         plt.figure(0)
         plt.plot(dirs, rates, 'r*')
-        plt.plot(np.rad2deg(theta), firing_rates)
+        plt.plot(np.rad2deg(theta), exp_firing_rates)
         plt.xlabel('angle (degrees)')
         plt.ylabel('firing rate (spikes/s)')
         plt.draw()
@@ -273,20 +295,24 @@ def main(args):
         parseMatFile(args.mat_file)
 
     elif(mode == 'tune'):
+        assert len(args.rates) == len(args.dirs)
         rates = np.asfortranarray(args.rates).astype(np.float)
-        dirs = np.asfortranarray(args.dirs).astype(np.int)
-        planTuningCurve(dirs=dirs, rates=rates)
+        dirs = np.asfortranarray(args.dirs).astype(np.float)
+        rates = np.reshape(rates, (np.shape(rates)[0], 1))
+        dirs = np.reshape(dirs, (np.shape(dirs)[0], 1))
+        plan_tuning_curve(dirs=dirs, rates=rates, show_plots=show_plots)
 
     elif(mode == 'synthetic'):
-        spike_trains = generateRaster(
-            spike_rate=int(args.rates[0]), 
-            duration=args.duration, 
-            num_trains=args.num_trials, 
-            distribution=args.rand,
+        assert len(args.duration) == len(args.rates)
+        spike_trains = generate_rasters(
+            spike_rates=args.rates,
+            intervals=args.duration,
+            num_trains=args.num_trials,
+            distribution=SpikeDistribution[args.rand],
             show_plots=show_plots,
         )
-        plotPSTH(spike_trains, args.duration, args.bin_size, show_plots)
-        plotISIH(spike_trains, args.duration, show_plots)
+        plotPSTH(spike_trains, sum(args.duration), args.bin_size, show_plots)
+        plotISIH(spike_trains, sum(args.duration), show_plots)
 
     else:
         print("need to pick a mode")
