@@ -33,17 +33,77 @@ import numpy as np
 import matplotlib.pyplot as plt
 from nsimulate_util import build_args, parse_mat_file
 from neuron import NeuronSimulator, SpikeDistribution
+from stimuli import ReachStimuli
+
+def sim3_1_rate_func(reaches: ReachStimuli, preferred: ReachStimuli):
+    return 20 + 2*reaches.distances*np.cos(reaches.angles - preferred.angles[0])
+
+def sim3_1():
+    # Create a neuron responsive to reach stimuli, whose preferred stimulus
+    # is 0 degrees and 10 cm to the right.
+
+    radians = np.deg2rad(np.linspace(0, 315, 8))
+    milliseconds = np.ones(radians.shape)*500
+    centimeters = np.ones(radians.shape)*10
+    reaches = ReachStimuli(milliseconds, radians, centimeters)
+
+    pref_stimuli = [
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([0])), np.array([10])),
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([45])), np.array([10])),
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([90])), np.array([10])),
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([135])), np.array([10])),
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([180])), np.array([10])),
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([225])), np.array([10])),
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([270])), np.array([10])),
+        ReachStimuli(np.array([500]), np.deg2rad(np.array([315])), np.array([10])),
+    ]
+
+    neurons = [
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+        NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2),
+    ]
+
+    fig_num = 0
+    for neuron, pref_stimulus in zip(neurons, pref_stimuli):
+        neuron.assign_rate_func(sim3_1_rate_func, pref_stimulus)
+        rates = neuron.get_rates(reaches)
+        rasters = list(neuron.generate_rasters(rates, milliseconds, 100, 0))
+        neuron.plot_rasters(fig_num, rasters)
+        fig_num += 1
+
+
+    # reusing reach stimuli from pref list
+    reach_0 = pref_stimuli[0]
+    reach_180 = pref_stimuli[4]
+    rates_0 = []
+    rates_180 = []
+    for neuron, pref_stimulus in zip(neurons, pref_stimuli):
+        rates_0.append(neuron.get_rates(reach_0))
+        rates_180.append(neuron.get_rates(reach_180))
+
+    plt.figure(99)
+    plt.plot(np.arange(8), rates_0)
+    plt.plot(np.arange(8), rates_180)
+    plt.xlabel("neuron #")
+    plt.ylabel("spikes/s")
+    plt.draw()
+
 
 def main(args):
     mode = args.mode
     show_plots = args.show
 
-    neuron = NeuronSimulator(SpikeDistribution[args.rand])
-
     if(mode == 'file'):
         parse_mat_file(args.mat_file)
 
     elif(mode == 'tune'):
+        neuron = NeuronSimulator(SpikeDistribution[args.rand])
         assert len(args.rates) == len(args.dirs)
         rates = np.asfortranarray(args.rates).astype(np.float)
         dirs = np.asfortranarray(args.dirs).astype(np.float)
@@ -53,13 +113,16 @@ def main(args):
         neuron.tune_cosine_model(dirs=dirs, rates=rates, show_plots=show_plots)
 
     elif(mode == 'synthetic'):
+        neuron = NeuronSimulator(SpikeDistribution[args.rand])
         assert len(args.intervals) == len(args.rates)
-        spike_trains = neuron.generate_rasters(
+        spike_trains = [neuron.generate_rasters(
             spike_rates=args.rates,
             intervals=args.intervals,
             num_trials=args.num_trials,
-            show_plots=show_plots,
-        )
+        )]
+
+        neuron.plot_rasters(1, spike_trains)
+
         neuron.generate_spike_time_hist(
             spike_trains=spike_trains,
             duration=sum(args.intervals),
@@ -71,6 +134,9 @@ def main(args):
             duration=sum(args.intervals),
             show_plots=show_plots
         )
+
+    elif(mode == 'sim3_1'):
+        sim3_1()
 
     else:
         raise ValueError("Must pick a mode!")
