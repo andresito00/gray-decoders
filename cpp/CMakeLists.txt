@@ -3,6 +3,7 @@ project(gray-decoders-exe)
 
 # Needs system include to avoid clang-tidy warnings
 include_directories(SYSTEM lib/tclap/include/)
+include_directories(receiver/)
 
 set(decoder_src decode.cpp)
 

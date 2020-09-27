@@ -88,8 +88,8 @@ def sim3_1():
         rates_180.append(neuron.get_rates(reach_180))
 
     plt.figure(99)
-    plt.plot(np.arange(8), rates_0)
-    plt.plot(np.arange(8), rates_180)
+    plt.plot(np.arange(len(neurons)), rates_0, label='0 deg.')
+    plt.plot(np.arange(len(neurons)), rates_180, label='180 deg.')
     plt.xlabel("neuron #")
     plt.ylabel("spikes/s")
     plt.draw()
