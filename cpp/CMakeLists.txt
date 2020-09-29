@@ -3,11 +3,15 @@ project(gray-decoders-exe)
 
 # Needs system include to avoid clang-tidy warnings
 include_directories(SYSTEM lib/tclap/include/)
+include_directories(SYSTEM lib/concurrentqueue/)
 include_directories(receiver/)
+include_directories(util/)
 
 set(decoder_src decode.cpp)
 
-set(CMAKE_CXX_FLAGS "-std=c++17")
+add_compile_definitions(L1_CACHE_LINE_SIZE=${L1_CACHE_LINE_SIZE})
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
@@ -26,6 +30,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdouble-promotion")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat=2")
 # TODO: -Wlifetime
 
+# in order of "least" to "most" dependent
+add_subdirectory(util)
+add_subdirectory(receiver)
+
+
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
     set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif()
@@ -33,3 +42,9 @@ endif()
 set(CMAKE_CXX_CLANG_TIDY clang-tidy -fix -checks=google-*,clang-analyzer-*,-header-filter=.*)
 
 add_executable(decode ${decoder_src})
+
+target_link_libraries(
+  decode
+
+  receiver
+)

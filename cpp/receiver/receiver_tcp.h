@@ -1,78 +1,41 @@
 #ifndef DECODER_RECEIVER_RECEIVER_TCP_H_
 #define DECODER_RECEIVER_RECEIVER_TCP_H_
 
-#include "receiver.h"
 #include <string>
-#include <unistd.h>
-#include <stdio.h>
 #include <sys/socket.h>
-#include <stdlib.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
+#include <util.h>
+#include "receiver.h"
+
 
 class ReceiverTcp : public Receiver
 {
  private:
-  receiver_status_e status;
-  std::string ip;
-  int port;
+  ReceiverStatus_e status_;
+  alignas(L1_CACHE_LINE_SIZE) uint8_t *buffer_;
+  size_t size_;
+  std::string ip_;
+  int port_;
+  int socket_;
   union {
     // helps avoid old-style casts
-    struct sockaddr_in address;
-    struct sockaddr address_alias;
+    struct sockaddr_in address_;
+    struct sockaddr address_alias_;
   };
-  size_t size;
-  uint8_t *buffer;
+
 
  public:
-  ReceiverTcp(std::string ip, int port, size_t buffer_size)
-      : ip{ip}, port{port}, size{buffer_size}
-  {
-  }
-  ~ReceiverTcp() { delete[] buffer; }
+  ReceiverTcp(std::string ip, int port, size_t buffer_size);
+  ~ReceiverTcp();
+  ReceiverStatus_e initialize(void) override;
 
-  receiver_status_e initialize() override
-  {
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (server_fd == 0) {
-      std::cout << strerror(errno) << std::endl;
-      exit(EXIT_FAILURE);
-    }
-
-    int opt = 1;
-    int ret =
-        setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    if (ret < 0) {
-      std::cout << strerror(errno) << std::endl;
-      exit(EXIT_FAILURE);
-    }
-
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &(address.sin_addr));
-    ret = bind(server_fd, &address_alias, sizeof(address));
-
-    if (ret < 0) {
-      std::cout << strerror(errno) << std::endl;
-      exit(EXIT_FAILURE);
-    }
-
-    buffer = new uint8_t[size];
-
-    status = RECEIVER_STATUS_OKAY;
-    return status;
-  }
-
-  receiver_status_e start() override { return RECEIVER_STATUS_OKAY; }
-
-  receiver_status_e close() override { return RECEIVER_STATUS_OKAY; }
-
-  receiver_status_e get_status(void) override { return status; }
-
-  std::string get_ip(void) { return ip; }
-
-  int get_port(void) { return port; }
+  // For now, this member function expects to receive on
+  // spike raster structure boundaries. Should be made more robust.
+  ReceiverStatus_e receive(SpikeRaster_t& result) override;
+  ReceiverStatus_e close() override;
+  ReceiverStatus_e get_status(void) override;
+  std::string get_ip(void);
+  int get_port(void);
 };
 
 #endif  // DECODER_RECEIVER_RECEIVER_H_

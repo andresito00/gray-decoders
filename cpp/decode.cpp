@@ -1,5 +1,6 @@
 #include <iostream>
 #include <tclap/CmdLine.h>
+#include <util.h>
 #include <receiver_tcp.h>
 
 int main(int argc, char *argv[])
@@ -33,6 +34,14 @@ int main(int argc, char *argv[])
   //  initialize receiver process
   Receiver *receiver = new ReceiverTcp(ip, port, 4096);
   receiver->initialize();
+  while(true) {
+    SpikeRaster_t current = { };
+    ReceiverStatus_e status = RECEIVER_STATUS_OKAY;
+    status = receiver->receive(current);
+    if (status != RECEIVER_STATUS_OKAY) {
+      exit(1);
+    }
+  }
   //  initialize learner process
   //  initialize decoder process(es)
 
