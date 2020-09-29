@@ -10,9 +10,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-class ReceiverTcp: public Receiver {
-
-private:
+class ReceiverTcp : public Receiver {
+ private:
   receiver_status_e status;
   std::string ip;
   int port;
@@ -24,28 +23,23 @@ private:
   size_t size;
   uint8_t *buffer;
 
-public:
-  ReceiverTcp(std::string ip, int port, size_t buffer_size):
-    ip{ip}, port{port}, size{buffer_size} {}
-  ~ReceiverTcp()
-  {
-    delete[] buffer;
-  }
+ public:
+  ReceiverTcp(std::string ip, int port, size_t buffer_size)
+      : ip{ip}, port{port}, size{buffer_size} {}
+  ~ReceiverTcp() { delete[] buffer; }
 
-  receiver_status_e initialize() override
-  {
+  receiver_status_e initialize() override {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if(server_fd == 0) {
+    if (server_fd == 0) {
       std::cout << strerror(errno) << std::endl;
       exit(EXIT_FAILURE);
     }
 
     int opt = 1;
-    int ret = setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR,
-                         &opt, sizeof(opt));
-    if(ret < 0)
-    {
+    int ret =
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    if (ret < 0) {
       std::cout << strerror(errno) << std::endl;
       exit(EXIT_FAILURE);
     }
@@ -55,7 +49,7 @@ public:
     inet_pton(AF_INET, ip.c_str(), &(address.sin_addr));
     ret = bind(server_fd, &address_alias, sizeof(address));
 
-    if(ret < 0) {
+    if (ret < 0) {
       std::cout << strerror(errno) << std::endl;
       exit(EXIT_FAILURE);
     }
@@ -66,30 +60,15 @@ public:
     return status;
   }
 
-  receiver_status_e start() override
-  {
-    return RECEIVER_STATUS_OKAY;
-  }
+  receiver_status_e start() override { return RECEIVER_STATUS_OKAY; }
 
-  receiver_status_e close() override
-  {
-    return RECEIVER_STATUS_OKAY;
-  }
+  receiver_status_e close() override { return RECEIVER_STATUS_OKAY; }
 
-  receiver_status_e get_status(void) override
-  {
-    return status;
-  }
+  receiver_status_e get_status(void) override { return status; }
 
-  std::string get_ip(void)
-  {
-    return ip;
-  }
+  std::string get_ip(void) { return ip; }
 
-  int get_port(void)
-  {
-    return port;
-  }
+  int get_port(void) { return port; }
 };
 
-#endif // __DECODER_RECEIVER_RECEIVER_H
+#endif  // DECODER_RECEIVER_RECEIVER_H_

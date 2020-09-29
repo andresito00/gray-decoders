@@ -2,16 +2,15 @@
 #include <tclap/CmdLine.h>
 #include <receiver_tcp.h>
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   std::string ip;
   int port;
   try {
     TCLAP::CmdLine cmd("CLI interface to launch the decoder", ' ', "0.0");
     TCLAP::ValueArg<std::string> arg_ip("i", "ip", "IP address to bind to",
-      true, "", "string");
-    TCLAP::ValueArg<int> arg_port("p", "port", "Port to listen on", true,
-      8080, "int");
+                                        true, "", "string");
+    TCLAP::ValueArg<int> arg_port("p", "port", "Port to listen on", true, 8080,
+                                  "int");
 
     cmd.add(arg_ip);
     cmd.add(arg_port);
@@ -24,8 +23,8 @@ int main(int argc, char *argv[])
     std::cout << "Binding to " << ip << ": " << port << std::endl;
 
   } catch (TCLAP::ArgException &e) {
-    std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
-
+    std::cerr << "error: " << e.error() << " for arg " << e.argId()
+              << std::endl;
   }
 
   // main routine should eventually be:
