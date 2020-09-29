@@ -1,7 +1,8 @@
 #include <string>
 #include <vector>
 
-class RuntimeConfig {
+class RuntimeConfig
+{
  private:
   std::string raster_file;
   std::string kinematic_data_file;

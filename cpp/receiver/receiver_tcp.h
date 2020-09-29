@@ -10,7 +10,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-class ReceiverTcp : public Receiver {
+class ReceiverTcp : public Receiver
+{
  private:
   receiver_status_e status;
   std::string ip;
@@ -25,10 +26,13 @@ class ReceiverTcp : public Receiver {
 
  public:
   ReceiverTcp(std::string ip, int port, size_t buffer_size)
-      : ip{ip}, port{port}, size{buffer_size} {}
+      : ip{ip}, port{port}, size{buffer_size}
+  {
+  }
   ~ReceiverTcp() { delete[] buffer; }
 
-  receiver_status_e initialize() override {
+  receiver_status_e initialize() override
+  {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (server_fd == 0) {

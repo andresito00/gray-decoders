@@ -2,7 +2,8 @@
 #include <tclap/CmdLine.h>
 #include <receiver_tcp.h>
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   std::string ip;
   int port;
   try {

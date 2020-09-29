@@ -7,7 +7,8 @@ typedef enum receiver_status {
   RECEIVER_STATUS_CLOSED,
 } receiver_status_e;
 
-class Receiver {
+class Receiver
+{
  public:
   virtual receiver_status_e initialize() = 0;
   virtual receiver_status_e start() = 0;
