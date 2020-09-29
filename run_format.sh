@@ -3,8 +3,14 @@
 # https://stackoverflow.com/questions/55965712/how-do-i-add-clang-formatting-to-pre-commit-hook
 
 folder=.
-exclude_folder=./cpp/lib
-format_files=`find "${folder}" -type f -not -path "${exclude_folder}" -prune`
+format_files=\
+`find -E . \
+ -not -path "./cpp/lib/*"\
+ -not -path "./build/*"\
+ -iregex ".*\.(cpp|c|h|cc)"`
+
+echo "Formatting:"
+echo "${format_files}"
 
 for file in $format_files
 do
