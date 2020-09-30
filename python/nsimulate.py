@@ -116,7 +116,7 @@ async def simulate():
     print('Connection open...')
     for raster in neuron.generate_rasters(rates, milliseconds, 100, 0):
         raster_bytes = struct.pack(
-            f'Nf{len(raster)}f', len(raster), raster[-1], *raster)
+            f'Nd{len(raster)}dI', len(raster), raster[-1], *raster, 0xdeadbeef)
         print(binascii.hexlify(raster_bytes))
         writer.write(raster_bytes)
         break

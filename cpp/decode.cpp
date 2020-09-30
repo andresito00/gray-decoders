@@ -35,9 +35,14 @@ int main(int argc, char *argv[])
   Receiver *receiver = new ReceiverTcp(ip, port, 4096);
   receiver->initialize();
   while(true) {
-    SpikeRaster_t current = { };
+    SpikeRaster_t current;
     ReceiverStatus_e status = RECEIVER_STATUS_OKAY;
     status = receiver->receive(current);
+    std::cout << current.header.num_events << std::endl;
+    std::cout << current.header.epoch_ms << std::endl;
+    std::cout << current.raster.size() << std::endl;
+    return 0;
+
     if (status != RECEIVER_STATUS_OKAY) {
       exit(1);
     }
