@@ -41,6 +41,8 @@ int main(int argc, char *argv[])
     if (status != RECEIVER_STATUS_OKAY) {
       exit(1);
     }
+
+    // enqueue SpikeRaster_t current now that it has been populated
   }
   //  initialize learner process
   //  initialize decoder process(es)

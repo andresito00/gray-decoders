@@ -26,7 +26,9 @@
 
 # the meschach library has existing functions for some of this,
 # but they can't parse compressed matlab data or sparse matrices...
-
+import asyncio
+import struct
+import binascii
 import sys
 import argparse
 import numpy as np
@@ -37,6 +39,7 @@ from stimuli import ReachStimuli
 
 def sim3_1_rate_func(reaches: ReachStimuli, preferred: ReachStimuli):
     return 20 + 2*reaches.distances*np.cos(reaches.angles - preferred.angles[0])
+
 
 def sim3_1():
     # Create a neuron responsive to reach stimuli, whose preferred stimulus
@@ -74,9 +77,11 @@ def sim3_1():
         neuron.assign_rate_func(sim3_1_rate_func, pref_stimulus)
         rates = neuron.get_rates(reaches)
         rasters = list(neuron.generate_rasters(rates, milliseconds, 100, 0))
+        print(rasters[0])
+        print(rasters[1])
+        exit()
         neuron.plot_rasters(fig_num, rasters)
         fig_num += 1
-
 
     # reusing reach stimuli from pref list
     reach_0 = pref_stimuli[0]
@@ -94,25 +99,50 @@ def sim3_1():
     plt.ylabel("spikes/s")
     plt.draw()
 
+async def simulate():
+    radians = np.deg2rad(np.linspace(0, 315, 8))
+    milliseconds = np.ones(radians.shape)*500
+    centimeters = np.ones(radians.shape)*10
+    reaches = ReachStimuli(milliseconds, radians, centimeters)
+    pref_stimulus = ReachStimuli(
+        np.array([500]), np.deg2rad(np.array([0])), np.array([10]))
+
+    neuron = NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2)
+    neuron.assign_rate_func(sim3_1_rate_func, pref_stimulus)
+    rates = neuron.get_rates(reaches)
+
+    print('Opening the connection...')
+    _, writer = await asyncio.open_connection('127.0.0.1', 8808)
+    print('Connection open...')
+    for raster in neuron.generate_rasters(rates, milliseconds, 100, 0):
+        raster_bytes = struct.pack(
+            f'Nf{len(raster)}f', len(raster), raster[-1], *raster)
+        print(binascii.hexlify(raster_bytes))
+        writer.write(raster_bytes)
+        break
+
+    print('Closing the connection...')
+    writer.close()
+    await writer.wait_closed()
 
 def main(args):
     mode = args.mode
     show_plots = args.show
 
-    if(mode == 'file'):
+    if mode == 'file':
         parse_mat_file(args.mat_file)
 
-    elif(mode == 'tune'):
+    elif mode == 'tune':
         neuron = NeuronSimulator(SpikeDistribution[args.rand])
         assert len(args.rates) == len(args.dirs)
-        rates = np.asfortranarray(args.rates).astype(np.float)
-        dirs = np.asfortranarray(args.dirs).astype(np.float)
+        rates = np.asarray(args.rates).astype(np.float)
+        dirs = np.asarray(args.dirs).astype(np.float)
         rates = np.reshape(rates, (np.shape(rates)[0], 1))
         dirs = np.reshape(dirs, (np.shape(dirs)[0], 1))
 
         neuron.tune_cosine_model(dirs=dirs, rates=rates, show_plots=show_plots)
 
-    elif(mode == 'synthetic'):
+    elif mode == 'synthetic':
         neuron = NeuronSimulator(SpikeDistribution[args.rand])
         assert len(args.intervals) == len(args.rates)
         spike_trains = [neuron.generate_rasters(
@@ -135,8 +165,11 @@ def main(args):
             show_plots=show_plots
         )
 
-    elif(mode == 'sim3_1'):
+    elif mode == 'sim3_1':
         sim3_1()
+
+    elif mode == 'simulate':
+        asyncio.run(simulate())
 
     else:
         raise ValueError("Must pick a mode!")

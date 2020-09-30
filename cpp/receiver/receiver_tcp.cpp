@@ -28,27 +28,41 @@ ReceiverTcp::~ReceiverTcp()
 
 ReceiverStatus_e ReceiverTcp::initialize()
 {
-  socket_ = socket(AF_INET, SOCK_STREAM, 0);
+  bind_socket_ = socket(AF_INET, SOCK_STREAM, 0);
 
-  if (socket_ == 0) {
+  if (bind_socket_ == 0) {
     std::cout << strerror(errno) << std::endl;
     exit(EXIT_FAILURE);
   }
 
   int opt = 1;
   int ret =
-      setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+      setsockopt(bind_socket_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
   if (ret < 0) {
     std::cout << strerror(errno) << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  address_.sin_family = AF_INET;
-  address_.sin_port = htons(port_);
-  inet_pton(address_.sin_family, ip_.c_str(), &(address_.sin_addr));
-  ret = bind(socket_, &address_alias_, sizeof(address_alias_));
+  server_address_.sin_family = AF_INET;
+  server_address_.sin_port = htons(port_);
+  inet_pton(server_address_.sin_family, ip_.c_str(), &(server_address_.sin_addr));
 
+  ret = bind(bind_socket_, &server_address_alias_, sizeof(server_address_alias_));
   if (ret < 0) {
+    std::cout << strerror(errno) << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  ret = listen(bind_socket_, 1);
+  if (ret < 0) {
+    std::cout << strerror(errno) << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  /* Accept actual connection from the client */
+  socklen_t client_addr_len = sizeof(client_address_alias_);
+  comm_socket_ = accept(bind_socket_, &client_address_alias_, &client_addr_len);
+  if (comm_socket_ < 0) {
     std::cout << strerror(errno) << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -64,11 +78,11 @@ ReceiverStatus_e ReceiverTcp::initialize()
 ReceiverStatus_e ReceiverTcp::receive(SpikeRaster_t& result)
 {
   while(true) {
-    ssize_t num_bytes = recv(socket_, buffer_, size_, 0);
+    ssize_t num_bytes = recv(comm_socket_, buffer_, size_, 0);
     if (num_bytes > 0) {
-        (void) result;
+      std::cout << "lol got something" << std::endl;
     } else if (num_bytes < 0) {
-     std::cout << strerror(errno) << std::endl;
+      std::cout << strerror(errno) << std::endl;
     }
   }
 

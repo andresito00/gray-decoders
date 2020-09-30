@@ -16,13 +16,17 @@ class ReceiverTcp : public Receiver
   size_t size_;
   std::string ip_;
   int port_;
-  int socket_;
+  int bind_socket_;
+  int comm_socket_;
+  // helps avoid old-style casts
   union {
-    // helps avoid old-style casts
-    struct sockaddr_in address_;
-    struct sockaddr address_alias_;
+    struct sockaddr_in server_address_;
+    struct sockaddr server_address_alias_;
   };
-
+  union {
+    struct sockaddr_in client_address_;
+    struct sockaddr client_address_alias_;
+  };
 
  public:
   ReceiverTcp(std::string ip, int port, size_t buffer_size);

@@ -7,9 +7,8 @@
 #define MAX(a, b) ((a) > (b) ? (a): (b))
 
 typedef struct SpikeRaster {
-  size_t epoch_ms; // ms
-  size_t num_neurons;
   size_t num_events;
+  double epoch_ms; // ms
   double *raster; // 2-D matrix of (neurons) x (spike event times)
 } SpikeRaster_t;
 

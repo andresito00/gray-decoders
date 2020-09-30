@@ -178,7 +178,7 @@ class NeuronSimulator:
 
                 prev_t_spike = dt
 
-            yield np.asfortranarray(spike_train)
+            yield np.asarray(spike_train)
 
     @staticmethod
     def _mask_pad(array: np.ndarray, max_length: int) -> np.ndarray:
@@ -187,7 +187,7 @@ class NeuronSimulator:
         """
         ogLen = len(array)
         assert ogLen <= max_length
-        masked_array = np.asfortranarray(np.zeros(max_length))
+        masked_array = np.asarray(np.zeros(max_length))
         for i in range(0, max_length):
             masked_array[i] = array[i] if i < ogLen else np.ma.masked
         return masked_array
