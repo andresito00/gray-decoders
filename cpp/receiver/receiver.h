@@ -12,8 +12,6 @@ class Receiver
 {
  public:
   virtual ReceiverStatus_e initialize() = 0;
-  virtual ReceiverStatus_e receive(SpikeRaster_t& result) = 0;
-  virtual ReceiverStatus_e close() = 0;
   virtual ReceiverStatus_e get_status() = 0;
   virtual ~Receiver() {}
 };

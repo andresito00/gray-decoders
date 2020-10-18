@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <string.h>
 #include <cstddef>
 #include <unistd.h>
 #include <stdlib.h>
@@ -12,9 +13,9 @@
 #include <util.h>
 #include "receiver_tcp.h"
 #include "receiver.h"
+#include "concurrentqueue.h"
 
-
-ReceiverTcp::ReceiverTcp(std::string ip, int port, size_t buffer_size)
+ReceiverTcp::ReceiverTcp(std::string ip, uint16_t port, size_t buffer_size)
 {
   ip_ = ip;
   port_ = port;
@@ -25,7 +26,19 @@ ReceiverTcp::ReceiverTcp(std::string ip, int port, size_t buffer_size)
 
 ReceiverTcp::~ReceiverTcp()
 {
-   delete[] buffer_;
+  int ret = close(comm_socket_);
+  if (ret < 0) {
+    std::cout << strerror(errno) << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  ret = close(bind_socket_);
+  if (ret < 0) {
+    std::cout << strerror(errno) << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  delete[] buffer_;
 }
 
 ReceiverStatus_e ReceiverTcp::initialize()
@@ -74,40 +87,37 @@ ReceiverStatus_e ReceiverTcp::initialize()
   return status_;
 }
 
-// For now, this member function expects to receive on
-// spike raster structure boundaries. Should be made more robust.
-// I do not plan to handle MTU-based splits yet.
-ReceiverStatus_e ReceiverTcp::receive(SpikeRaster_t& result)
+SpikeRaster_t ReceiverTcp::deserialize(size_t num_bytes)
+{
+  SpikeRaster_t result;
+  uint8_t *end = buffer_ + num_bytes;
+  uint8_t *tail = end;
+
+  tail = util_find_packet_end(buffer_, end);
+  ASSERT(tail != nullptr);
+
+  uint64_t *id = reinterpret_cast<uint64_t *>(buffer_);
+  uint64_t *raster = id + 1;
+  uint64_t *raster_end = reinterpret_cast<uint64_t *>(tail);
+
+  return {*id, std::vector<uint64_t>(raster, raster_end)};
+}
+
+ReceiverStatus_e ReceiverTcp::receive(const std::shared_ptr<moodycamel::ConcurrentQueue<SpikeRaster_t>>& q)
 {
   while(true) {
-    ssize_t num_bytes = recv(comm_socket_, buffer_, size_, 0);
-    if (num_bytes > 0) {
-      uint32_t *end = (uint32_t *)(buffer_ + num_bytes);
-      uint32_t *tail = util_find_raster_end((uint32_t *)buffer_, end);
-      // Presumptuous for the time being...
-      if (tail != nullptr) {
-        memcpy(&result, buffer_, sizeof(SpikeRasterHeader_t));
-        result.raster.insert(
-          result.raster.end(),
-          (double *)(buffer_ + sizeof(SpikeRasterHeader_t)),
-          (double *)tail);
-        if (end == tail + 1) {
-          return RECEIVER_STATUS_OKAY;
-        } else {
-          assert(0);
-        }
-      }
-      break;
-    } else if (num_bytes < 0) {
+    ssize_t bytes_received = recv(comm_socket_, buffer_, size_, 0);
+    if (bytes_received > 0) {
+      auto raster = deserialize(static_cast<size_t>(bytes_received));
+      q->enqueue(raster);
+    } else if (bytes_received < 0) {
       std::cout << strerror(errno) << std::endl;
-      exit(EXIT_FAILURE);
+      return RECEIVER_STATUS_ERROR;
     }
   }
 
   return RECEIVER_STATUS_OKAY;
 }
-
-ReceiverStatus_e ReceiverTcp::close() { return RECEIVER_STATUS_OKAY; }
 
 ReceiverStatus_e ReceiverTcp::get_status(void) { return status_; }
 

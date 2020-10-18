@@ -14,17 +14,15 @@
 #define MIN(a, b) ((a) < (b) ? (a): (b))
 #define MAX(a, b) ((a) > (b) ? (a): (b))
 
-typedef struct SpikeRasterHeader {
-  size_t num_events;
-  double epoch_ms;
-} SpikeRasterHeader_t;
-
 // TODO: Move to its own raster directory/file
-typedef struct SpikeRaster {
-  SpikeRasterHeader_t header;
-  std::vector<double> raster; // 1-D array of event times
+// Would like to keep this P.O.D...
+typedef struct __attribute__((packed)) SpikeRaster {
+  uint64_t id;
+  std::vector<uint64_t> raster; // 1-D array of event times
 } SpikeRaster_t;
 
-uint32_t *util_find_raster_end(uint32_t *buffer, uint32_t *end);
+typedef uint32_t tail_marker_t;
+
+uint8_t *util_find_packet_end(uint8_t *buffer, uint8_t *end);
 
 #endif // UTIL_UTIL_H_

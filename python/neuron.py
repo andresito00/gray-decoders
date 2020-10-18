@@ -171,7 +171,7 @@ class NeuronSimulator:
                 if rate > 0:
                     while dt <= duration and (dt - prev_t_spike) <= interval:
                         dt += self.rand_func(beta)
-                        spike_train.append(dt)
+                        spike_train.append(int(dt))
 
                 else:
                     dt += interval

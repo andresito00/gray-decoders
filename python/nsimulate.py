@@ -114,12 +114,15 @@ async def simulate():
     print('Opening the connection...')
     _, writer = await asyncio.open_connection('127.0.0.1', 8808)
     print('Connection open...')
+    count = 0
     for raster in neuron.generate_rasters(rates, milliseconds, 100, 0):
         raster_bytes = struct.pack(
-            f'Nd{len(raster)}dI', len(raster), raster[-1], *raster, 0xdeadbeef)
-        print(binascii.hexlify(raster_bytes))
+            f'Q{len(raster)}QI', 0xFF, *raster, 0xdeadbeef)
+        # print(binascii.hexlify(raster_bytes))
         writer.write(raster_bytes)
-        break
+        count += 1
+        if count == 21:
+            break
 
     print('Closing the connection...')
     writer.close()
