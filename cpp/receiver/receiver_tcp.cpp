@@ -20,7 +20,7 @@ ReceiverTcp::ReceiverTcp(std::string ip, uint16_t port, size_t buffer_size)
   ip_ = ip;
   port_ = port;
 
-  assert(buffer_size % 4 == 0);
+  ASSERT(buffer_size % 4 == 0);
   size_ = buffer_size;
 }
 
@@ -47,7 +47,7 @@ ReceiverStatus_e ReceiverTcp::initialize()
 
   if (bind_socket_ == 0) {
     std::cout << strerror(errno) << std::endl;
-    exit(EXIT_FAILURE);
+    return RECEIVER_STATUS_ERROR;
   }
 
   int opt = 1;
@@ -55,7 +55,7 @@ ReceiverStatus_e ReceiverTcp::initialize()
       setsockopt(bind_socket_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
   if (ret < 0) {
     std::cout << strerror(errno) << std::endl;
-    exit(EXIT_FAILURE);
+    return RECEIVER_STATUS_ERROR;
   }
 
   server_address_.sin_family = AF_INET;
@@ -65,20 +65,21 @@ ReceiverStatus_e ReceiverTcp::initialize()
   ret = bind(bind_socket_, &server_address_alias_, sizeof(server_address_alias_));
   if (ret < 0) {
     std::cout << strerror(errno) << std::endl;
-    exit(EXIT_FAILURE);
+    return RECEIVER_STATUS_ERROR;
   }
 
+  std::cout << "Listening..." << std::endl;
   ret = listen(bind_socket_, 1);
   if (ret < 0) {
     std::cout << strerror(errno) << std::endl;
-    exit(EXIT_FAILURE);
+    return RECEIVER_STATUS_ERROR;
   }
 
   socklen_t client_addr_len = sizeof(client_address_alias_);
   comm_socket_ = accept(bind_socket_, &client_address_alias_, &client_addr_len);
   if (comm_socket_ < 0) {
     std::cout << strerror(errno) << std::endl;
-    exit(EXIT_FAILURE);
+    return RECEIVER_STATUS_ERROR;
   }
 
   buffer_ = new uint8_t[size_];
@@ -103,13 +104,13 @@ SpikeRaster_t ReceiverTcp::deserialize(size_t num_bytes)
   return {*id, std::vector<uint64_t>(raster, raster_end)};
 }
 
-ReceiverStatus_e ReceiverTcp::receive(const std::shared_ptr<moodycamel::ConcurrentQueue<SpikeRaster_t>>& q)
+ReceiverStatus_e ReceiverTcp::receive(moodycamel::ConcurrentQueue<SpikeRaster_t>& q)
 {
   while(true) {
     ssize_t bytes_received = recv(comm_socket_, buffer_, size_, 0);
     if (bytes_received > 0) {
       auto raster = deserialize(static_cast<size_t>(bytes_received));
-      q->enqueue(raster);
+      q.enqueue(raster);
     } else if (bytes_received < 0) {
       std::cout << strerror(errno) << std::endl;
       return RECEIVER_STATUS_ERROR;

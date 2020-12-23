@@ -2,6 +2,7 @@
 #define UTIL_UTIL_H_
 
 #include <vector>
+#include <string>
 #include <stdint.h>
 #include <assert.h>
 
@@ -14,15 +15,19 @@
 #define MIN(a, b) ((a) < (b) ? (a): (b))
 #define MAX(a, b) ((a) > (b) ? (a): (b))
 
-// TODO: Move to its own raster directory/file
-// Would like to keep this P.O.D...
 typedef struct __attribute__((packed)) SpikeRaster {
   uint64_t id;
   std::vector<uint64_t> raster; // 1-D array of event times
 } SpikeRaster_t;
 
-typedef uint32_t tail_marker_t;
-
-uint8_t *util_find_packet_end(uint8_t *buffer, uint8_t *end);
+static inline uint8_t *util_find_packet_end(uint8_t *buffer, uint8_t *end)
+{
+  static const std::string needle("\xEF\xBE\xAD\xDE", 4);
+  std::string sv(reinterpret_cast<char const*>(buffer), (end - buffer));
+  if (std::size_t n = sv.find(needle); n != sv.npos) {
+      return reinterpret_cast<uint8_t *>(buffer + n);
+  }
+  return nullptr;
+}
 
 #endif // UTIL_UTIL_H_

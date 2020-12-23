@@ -5,4 +5,4 @@ set(receiver_src
 )
 add_library(receiver ${receiver_src})
 
-target_link_libraries(receiver util)
+# target_link_libraries(receiver)

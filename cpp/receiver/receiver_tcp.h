@@ -5,10 +5,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <util.h>
+#include <concurrentqueue.h>
 #include "receiver.h"
-#include "concurrentqueue.h"
 
-class ReceiverTcp : public Receiver
+
+class ReceiverTcp
 {
  private:
   ReceiverStatus_e status_;
@@ -40,11 +41,11 @@ class ReceiverTcp : public Receiver
   ReceiverTcp(ReceiverTcp&& a) = delete;
   ReceiverTcp& operator=(ReceiverTcp&& a) = delete;
 
-  ReceiverStatus_e initialize(void) override;
+  ReceiverStatus_e initialize(void);
   // For now, this member function expects to receive on
   // spike raster structure boundaries. Should be made more robust.
-  ReceiverStatus_e receive(const std::shared_ptr<moodycamel::ConcurrentQueue<SpikeRaster_t>>& q);
-  ReceiverStatus_e get_status(void) override;
+  ReceiverStatus_e receive(moodycamel::ConcurrentQueue<SpikeRaster_t>& q);
+  ReceiverStatus_e get_status(void);
   std::string get_ip(void);
   int get_port(void);
 };
