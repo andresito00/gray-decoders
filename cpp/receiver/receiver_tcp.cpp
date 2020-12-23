@@ -60,9 +60,11 @@ ReceiverStatus_e ReceiverTcp::initialize()
 
   server_address_.sin_family = AF_INET;
   server_address_.sin_port = htons(port_);
-  inet_pton(server_address_.sin_family, ip_.c_str(), &(server_address_.sin_addr));
+  inet_pton(server_address_.sin_family, ip_.c_str(),
+            &(server_address_.sin_addr));
 
-  ret = bind(bind_socket_, &server_address_alias_, sizeof(server_address_alias_));
+  ret =
+      bind(bind_socket_, &server_address_alias_, sizeof(server_address_alias_));
   if (ret < 0) {
     std::cout << strerror(errno) << std::endl;
     return RECEIVER_STATUS_ERROR;
@@ -104,9 +106,10 @@ SpikeRaster_t ReceiverTcp::deserialize(size_t num_bytes)
   return {*id, std::vector<uint64_t>(raster, raster_end)};
 }
 
-ReceiverStatus_e ReceiverTcp::receive(moodycamel::ConcurrentQueue<SpikeRaster_t>& q)
+ReceiverStatus_e ReceiverTcp::receive(
+    moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
 {
-  while(true) {
+  while (true) {
     ssize_t bytes_received = recv(comm_socket_, buffer_, size_, 0);
     if (bytes_received > 0) {
       auto raster = deserialize(static_cast<size_t>(bytes_received));

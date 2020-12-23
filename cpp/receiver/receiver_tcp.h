@@ -8,12 +8,11 @@
 #include <concurrentqueue.h>
 #include "receiver.h"
 
-
 class ReceiverTcp
 {
  private:
   ReceiverStatus_e status_;
-  alignas(L1_CACHE_LINE_SIZE) uint8_t *buffer_;
+  alignas(L1_CACHE_LINE_SIZE) uint8_t* buffer_;
   size_t size_;
   std::string ip_;
   uint16_t port_;

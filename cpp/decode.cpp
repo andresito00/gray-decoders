@@ -9,10 +9,8 @@
 #include <receiver_tcp.h>
 #include "concurrentqueue.h"
 
-int initialize(
-  std::string ip,
-  uint16_t port,
-  moodycamel::ConcurrentQueue<SpikeRaster_t>& q)
+int initialize(std::string ip, uint16_t port,
+               moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
 {
   ReceiverTcp *receiver = new ReceiverTcp(ip, port, 4096);
   receiver->initialize();
@@ -24,7 +22,7 @@ int initialize(
   return 0;
 }
 
-int decode(moodycamel::ConcurrentQueue<SpikeRaster_t>& q)
+int decode(moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
 {
   while (true) {
     SpikeRaster_t found;
@@ -45,8 +43,8 @@ int main(int argc, char *argv[])
     TCLAP::CmdLine cmd("CLI interface to launch the decoder", ' ', "0.0");
     TCLAP::ValueArg<std::string> arg_ip("i", "ip", "IP address to bind to",
                                         true, "", "string");
-    TCLAP::ValueArg<uint16_t> arg_port("p", "port", "Port to listen on", true, 8080,
-                                  "int");
+    TCLAP::ValueArg<uint16_t> arg_port("p", "port", "Port to listen on", true,
+                                       8080, "int");
 
     cmd.add(arg_ip);
     cmd.add(arg_port);
@@ -68,14 +66,16 @@ int main(int argc, char *argv[])
   //  initialize receiver process
   auto q = moodycamel::ConcurrentQueue<SpikeRaster_t>();
 
-  std::thread receiver(initialize, ip, port, std::ref(q));     // spawn new thread that calls foo()
-  std::thread decoder(decode, std::ref(q));  // spawn new thread that calls bar(0)
+  std::thread receiver(initialize, ip, port,
+                       std::ref(q));  // spawn new thread that calls foo()
+  std::thread decoder(decode,
+                      std::ref(q));  // spawn new thread that calls bar(0)
 
   std::cout << "Now executing concurrently...\n" << std::endl;
 
   // synchronize threads:
-  receiver.join();                // pauses until first finishes
-  decoder.join();               // pauses until second finishes
+  receiver.join();  // pauses until first finishes
+  decoder.join();   // pauses until second finishes
 
   //  initialize learner process
 
