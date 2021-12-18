@@ -111,9 +111,7 @@ async def simulate():
     print('Connection open...')
     count = 0
     for raster in neuron.generate_rasters(rates, milliseconds, 100, 0):
-        raster_bytes = struct.pack(
-            f'Q{len(raster)}QI', 0xFF, *raster, 0xdeadbeef)
-        # print(binascii.hexlify(raster_bytes))
+        raster_bytes = struct.pack(f'Q{len(raster)}QI', 0xFF, *raster, 0xdeadbeef)
         writer.write(raster_bytes)
         count += 1
         if count == 21:
