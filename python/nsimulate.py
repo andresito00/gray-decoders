@@ -148,24 +148,27 @@ def main(args):
     elif mode == 'synthetic':
         neuron = NeuronSimulator(SpikeDistribution[args.rand])
         assert len(args.intervals) == len(args.rates)
-        spike_trains = [neuron.generate_rasters(
-            spike_rates=args.rates,
-            intervals=args.intervals,
-            num_trials=args.num_trials,
-        )]
-
-        neuron.plot_rasters(1, spike_trains)
+        spike_trains = list(neuron.generate_rasters(
+                    spike_rates=np.asarray(args.rates),
+                    intervals=np.asarray(args.intervals),
+                    num_trials=args.num_trials,
+                    start_time=args.start_time or 0
+                ))
+        if args.show:
+            neuron.plot_rasters(spike_trains, figure_number=0)
 
         neuron.generate_spike_time_hist(
             spike_trains=spike_trains,
             duration=sum(args.intervals),
             bin_size=args.bin_size,
-            show_plots=show_plots
+            show_plots=show_plots,
+            figure_number=1,
         )
         neuron.generate_inter_spike_interval_hist(
             spike_trains=spike_trains,
             duration=sum(args.intervals),
-            show_plots=show_plots
+            show_plots=show_plots,
+            figure_number=2,
         )
 
     elif mode == 'sim3_1':

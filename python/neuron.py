@@ -2,7 +2,7 @@ from enum import Enum
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from typing import List, Callable, Generator
+from typing import List, Callable, Generator, Optional
 import uuid
 from stimuli import Stimuli
 
@@ -19,7 +19,7 @@ class NeuronSimulator:
     def __init__(
         self,
         distribution: SpikeDistribution,
-        scaling_factor=None,
+        scaling_factor: float = None,
         group_name="unk"
     ):
         if distribution == SpikeDistribution.EXP:
@@ -74,7 +74,7 @@ class NeuronSimulator:
         self,
         dirs: np.array,
         rates: np.array,
-        show_plots=False
+        show_plots: bool = False
     ) -> np.ndarray:
         """
         Takes an array of average firing rates of a neuron
@@ -142,7 +142,7 @@ class NeuronSimulator:
         return self.rate_func(stimuli, self.preferred_stimulus)
 
     @staticmethod
-    def plot_rasters(figure_number: int, spike_trains: List[np.ndarray]) -> None:
+    def plot_rasters(spike_trains: List[np.ndarray], figure_number: Optional[int]) -> None:
         plt.figure(figure_number)
         plt.eventplot(spike_trains)
         plt.xlabel("time (ms)")
@@ -155,7 +155,7 @@ class NeuronSimulator:
         intervals: np.ndarray,     # ms
         num_trials: int,
         start_time: int, # ms
-    ) -> Generator[List[np.ndarray], None, None]:
+    ) -> Generator[np.ndarray, None, None]:
         """
         The following generates and returns spike rasters by using
         delta-t from a random exponential distribution characterized by...
@@ -196,7 +196,8 @@ class NeuronSimulator:
     def generate_inter_spike_interval_hist(
         spike_trains: np.ndarray,
         duration: int, # ms
-        show_plots=False
+        figure_number: Optional[int],
+        show_plots: bool = False,
     ) -> List[np.ndarray]:
         """
         Creates a histogram of the inter-spike intervals in the provided rasters
@@ -214,7 +215,7 @@ class NeuronSimulator:
             isi.append(masked_intervals)
 
         if show_plots:
-            plt.figure(3)
+            plt.figure(figure_number)
             plt.hist(isi)
             plt.xlabel('inter-spike interval (ms)')
             plt.ylabel('# spikes')
@@ -224,10 +225,11 @@ class NeuronSimulator:
 
     @staticmethod
     def generate_spike_time_hist(
-        figure_number: int,
         spike_trains: np.ndarray,
         duration: int, # ms
         bin_size: int, # ms
+        figure_number: Optional[int],
+        show_plots: bool = False,
     ) -> np.ndarray:
         """
         Creates a histogram of the binned spike counts
@@ -257,11 +259,12 @@ class NeuronSimulator:
             sentinel = start + bin_size
             idx += 1
 
-        plt.figure(figure_number)
-        plt.bar(
-            range(0, num_bins), spike_counts, align='center')
-        plt.xlabel(f"bins ({bin_size}s of ms)")
-        plt.ylabel("avg spike count")
-        plt.draw()
+        if show_plots:
+            plt.figure(figure_number)
+            plt.bar(
+                range(0, num_bins), spike_counts, align='center')
+            plt.xlabel(f"bins ({bin_size}s of ms)")
+            plt.ylabel("avg spike count")
+            plt.draw()
 
         return spike_counts

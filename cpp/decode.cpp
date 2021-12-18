@@ -26,7 +26,7 @@ void decode(moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
     SpikeRaster_t found;
     bool result = q.try_dequeue(found);
     if (result) {
-      std::cout << std::hex << found.id << std::endl;
+      std::cout << "ID: " << std::hex << found.id << std::endl;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }

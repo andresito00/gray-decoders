@@ -96,6 +96,12 @@ def build_args():
       help='the number of trials we\'ll generate for each target'
     )
 
+    parser.add_argument(
+      '--start-time', '-st',
+      type=int,
+      help='the number of trials we\'ll generate for each target'
+    )
+
     # raster generation parameters
     parser.add_argument(
       '--intervals', '-dt',
