@@ -110,6 +110,7 @@ ReceiverStatus_e ReceiverTcp::receive(
     moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
 {
   while (true) {
+    // TODO: Use select
     ssize_t bytes_received = recv(comm_socket_, buffer_, size_, 0);
     if (bytes_received > 0) {
       auto raster = deserialize(static_cast<size_t>(bytes_received));

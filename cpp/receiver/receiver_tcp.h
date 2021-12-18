@@ -18,10 +18,10 @@ class ReceiverTcp
   uint16_t port_;
   int bind_socket_;
   int comm_socket_;
-  // To avoid old-style casts
+
   union {
     struct sockaddr_in server_address_;
-    struct sockaddr server_address_alias_;
+    struct sockaddr server_address_alias_; // To avoid old-style casts
   };
   union {
     struct sockaddr_in client_address_;

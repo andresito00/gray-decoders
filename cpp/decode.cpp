@@ -9,20 +9,18 @@
 #include <receiver_tcp.h>
 #include "concurrentqueue.h"
 
-int initialize(std::string ip, uint16_t port,
+void listens(std::string ip, uint16_t port,
                moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
 {
   ReceiverTcp *receiver = new ReceiverTcp(ip, port, 4096);
   receiver->initialize();
   ReceiverStatus_e status = receiver->receive(q);
   if (status == RECEIVER_STATUS_ERROR) {
-    std::cout << "huh?" << std::endl;
     exit(EXIT_FAILURE);
   }
-  return 0;
 }
 
-int decode(moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
+void decode(moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
 {
   while (true) {
     SpikeRaster_t found;
@@ -30,9 +28,8 @@ int decode(moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
     if (result) {
       std::cout << std::hex << found.id << std::endl;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
-  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -66,16 +63,14 @@ int main(int argc, char *argv[])
   //  initialize receiver process
   auto q = moodycamel::ConcurrentQueue<SpikeRaster_t>();
 
-  std::thread receiver(initialize, ip, port,
-                       std::ref(q));  // spawn new thread that calls foo()
-  std::thread decoder(decode,
-                      std::ref(q));  // spawn new thread that calls bar(0)
+  auto receives = std::thread(listens, ip, port, std::ref(q));
+  auto decodes = std::thread(decode, std::ref(q));  // spawn new thread that calls bar(0)
 
   std::cout << "Now executing concurrently...\n" << std::endl;
 
   // synchronize threads:
-  receiver.join();  // pauses until first finishes
-  decoder.join();   // pauses until second finishes
+  receives.join();  // pauses until first finishes
+  decodes.join();   // pauses until second finishes
 
   //  initialize learner process
 
