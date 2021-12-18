@@ -1,7 +1,6 @@
 from enum import Enum
 import numpy as np
 import time
-import matplotlib.pyplot as plt
 from typing import List, Callable, Generator, Optional
 import uuid
 from stimuli import Stimuli
@@ -19,20 +18,25 @@ class NeuronSimulator:
     def __init__(
         self,
         distribution: SpikeDistribution,
-        scaling_factor: float = None,
-        group_name="unk"
+        scaling_factor: Optional[float] = None,
+        rate_func: Optional[Callable[[Stimuli], np.ndarray]] = None,
+        preferred_stimulus: Optional[Stimuli] = None,
+        group_name: str = "unk",
+        plots=False,
     ):
+        if plots:
+            import matplotlib.pyplot as plt
         if distribution == SpikeDistribution.EXP:
-            rand_func = lambda beta: int(np.random.exponential(beta))
+            rand_func = lambda beta: np.random.exponential(beta)
         elif distribution == SpikeDistribution.GAMMA:
             if scaling_factor is None:
                 raise NeuronError(
                     "Gamma distribution type requires a scaling factor.")
             shape = scaling_factor + 1
-            rand_func = lambda beta: int(np.random.gamma(shape, beta))
+            rand_func = lambda beta: np.random.gamma(shape, beta)
         elif distribution == SpikeDistribution.POISSON:
             self.rng = np.random.default_rng()
-            rand_func = lambda beta: int(self.rng.poisson(beta))
+            rand_func = lambda beta: self.rng.poisson(beta)
         else:
             raise NeuronError(f"Distribution {distribution} not implemented!")
 
@@ -42,8 +46,8 @@ class NeuronSimulator:
         self.group = group_name
         # These two are provisioned by assigning the rate function either by
         # tuning or providing a given one.
-        self.rate_func = None
-        self.preferred_stimulus = None
+        self.rate_func = rate_func
+        self.preferred_stimulus = preferred_stimulus
 
         # Only needed when tuning.
         self.k = None # cosine model tuning coefficients
@@ -127,6 +131,8 @@ class NeuronSimulator:
         At this time rate functions recevie an array of action directions
         and return an array of rates (1:1).
         """
+        if self.preferred_stimulus or self.rate_func:
+            raise NeuronError("Rate function parameters already set!")
         self.preferred_stimulus = preferred_stimulus
         self.rate_func = rate_func
 
@@ -152,25 +158,35 @@ class NeuronSimulator:
     def generate_rasters(
         self,
         spike_rates: np.ndarray, # spikes/s
-        intervals: np.ndarray,     # ms
+        intervals: np.ndarray,   # ms
         num_trials: int,
         start_time: int, # ms
     ) -> Generator[np.ndarray, None, None]:
         """
+        The "workhorse" of the NeuronSimulator class. This one should be optimized to produce.
+        rasters.
+
+        Note a real neuron's refractory period is O(ms) so take this into consideration when
+        trying to model real behavior at a large scale.
+
         The following generates and returns spike rasters by using
         delta-t from a random exponential distribution characterized by...
+
+        :param spike_rates: the firing rate of a neuron
+        :param intervals: the duration for each spike rate (1:1 mapping)
+        :param num_trials: number of trials (rasters to generate)
+        :param start_time: "grounds" the spike events in absolutely. "spike n happens at time t."
         """
-        betas = 1000/spike_rates
+        time_to_spike = self.rand_func(1000/spike_rates) # convert s to ms
+        duration = np.sum(intervals)
         for i in range(0, num_trials):
             spike_train = []
             prev_t_spike = start_time
             dt = start_time
-            duration = np.sum(intervals)
-
-            for rate, beta, interval in zip(spike_rates, betas, intervals):
+            for rate, rand_result, interval in zip(spike_rates, time_to_spike, intervals):
                 if rate > 0:
                     while dt <= duration and (dt - prev_t_spike) <= interval:
-                        dt += self.rand_func(beta)
+                        dt += rand_result
                         spike_train.append(int(dt))
 
                 else:

@@ -1,4 +1,3 @@
-from abc import ABC
 from dataclasses import dataclass
 import numpy as np
 
@@ -23,13 +22,14 @@ class ReachStimuli(Stimuli):
         angles: np.ndarray,
         distances: np.ndarray
     ):
-        try:
-            assert durations.shape == angles.shape == distances.shape
-        except AssertionError:
+        if durations.shape == angles.shape == distances.shape:
+            super().__init__(durations)
+            self.angles = angles
+            self.distances = distances
+        else:
             raise StimuliError(
-                "Number of Durations, Angles, Distances of ReachStimuli must be equal!")
+                "Number of Durations, Angles, Distances of ReachStimuli must be equal!"
+            )
 
-        super().__init__(durations)
-        self.angles = angles
-        self.distances = distances
+
 

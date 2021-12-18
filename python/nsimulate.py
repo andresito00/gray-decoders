@@ -30,13 +30,14 @@ import binascii
 import sys
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 from nsimulate_util import build_args, parse_mat_file
 from neuron import NeuronSimulator, SpikeDistribution
 from stimuli import ReachStimuli
 
 def sim3_1_rate_func(reaches: ReachStimuli, preferred: ReachStimuli):
-    return 20 + 2*reaches.distances*np.cos(reaches.angles - preferred.angles[0])
+    result = 20 + 2*reaches.distances*np.cos(reaches.angles - preferred.angles[0])
+    result[result==0] = 0.000001
+    return result
 
 
 def sim3_1():
@@ -94,28 +95,28 @@ def sim3_1():
     plt.ylabel("spikes/s")
     plt.draw()
 
-async def simulate():
+async def simulate_reaches():
     radians = np.deg2rad(np.linspace(0, 315, 8))
     milliseconds = np.ones(radians.shape)*500
     centimeters = np.ones(radians.shape)*10
+    pref_stimulus = ReachStimuli(np.array([500]), np.deg2rad(np.array([0])), np.array([10]))
+    neuron = NeuronSimulator(
+        SpikeDistribution.GAMMA,
+        scaling_factor=2,
+        rate_func=sim3_1_rate_func,
+        preferred_stimulus=pref_stimulus,
+        plots=False
+    )
     reaches = ReachStimuli(milliseconds, radians, centimeters)
-    pref_stimulus = ReachStimuli(
-        np.array([500]), np.deg2rad(np.array([0])), np.array([10]))
-
-    neuron = NeuronSimulator(SpikeDistribution.GAMMA, scaling_factor=2)
-    neuron.assign_rate_func(sim3_1_rate_func, pref_stimulus)
     rates = neuron.get_rates(reaches)
 
     print('Opening the connection...')
     _, writer = await asyncio.open_connection('127.0.0.1', 8808)
     print('Connection open...')
     count = 0
-    for raster in neuron.generate_rasters(rates, milliseconds, 100, 0):
+    for raster in neuron.generate_rasters(rates, milliseconds, num_trials=100, start_time=0):
         raster_bytes = struct.pack(f'Q{len(raster)}QI', 0xFF, *raster, 0xdeadbeef)
         writer.write(raster_bytes)
-        count += 1
-        if count == 21:
-            break
 
     print('Closing the connection...')
     writer.close()
@@ -168,7 +169,7 @@ def main(args):
         sim3_1()
 
     elif mode == 'simulate':
-        asyncio.run(simulate())
+        asyncio.run(simulate_reaches())
 
     else:
         raise ValueError("Must pick a mode!")
@@ -182,8 +183,6 @@ if __name__ == "__main__":
         python3 nsimulate --mode synthetic --rates 50 --intervals 2000 --bin-size 10 --num-trials 10 --rand EXP --show True
     """
     args = build_args()
+    if args.show:
+        import matplotlib.pyplot as plt
     main(args)
-
-
-
-
