@@ -83,6 +83,12 @@ def build_args():
     )
 
     parser.add_argument(
+      '--scale-factor', '-sf',
+      type=int,
+      help='GAMMA distribution scale factor'
+    )
+
+    parser.add_argument(
       '--pref-dir', '-pd',
       type=int,
       default=45,

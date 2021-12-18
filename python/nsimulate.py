@@ -24,8 +24,6 @@
 # **
 # ***************************************************************************/
 
-# the meschach library has existing functions for some of this,
-# but they can't parse compressed matlab data or sparse matrices...
 import asyncio
 import struct
 import binascii
@@ -77,10 +75,7 @@ def sim3_1():
         neuron.assign_rate_func(sim3_1_rate_func, pref_stimulus)
         rates = neuron.get_rates(reaches)
         rasters = list(neuron.generate_rasters(rates, milliseconds, 100, 0))
-        print(rasters[0])
-        print(rasters[1])
-        exit()
-        neuron.plot_rasters(fig_num, rasters)
+        neuron.plot_rasters(rasters, figure_number=fig_num)
         fig_num += 1
 
     # reusing reach stimuli from pref list
@@ -186,9 +181,7 @@ def main(args):
 if __name__ == "__main__":
     """
     Usage Examples:
-
-        python3 nsimulate --mode synthetic --rates 50 --intervals 2000 --bin-size 10 --num-trials 10 --rand gamma --show True
-        python3 nsimulate --mode synthetic --rates 50 --intervals 2000 --bin-size 10 --num-trials 10 --rand exp --show True
+        python3 nsimulate --mode synthetic --rates 50 --intervals 2000 --bin-size 10 --num-trials 10 --rand EXP --show True
     """
     args = build_args()
     main(args)
