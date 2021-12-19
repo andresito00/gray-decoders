@@ -1,7 +1,9 @@
 import argparse
 import numpy as np
 import scipy.io as io
-import matplotlib as plt
+import matplotlib.pyplot as plt
+from typing import List, Optional
+from neuron import SpikeDistribution
 
 def build_args():
     parser = argparse.ArgumentParser()
@@ -126,8 +128,9 @@ def build_args():
 
     return parser.parse_args()
 
+def show():
+    plt.show()
 
-@staticmethod
 def plot_cosine_model(k: np.ndarray, figure_number: int) -> None:
     theta = np.linspace(0, 2*np.pi, 80)
     exp_firing_rates = k[0][0] + k[1][0]*np.sin(theta) + \
@@ -140,7 +143,6 @@ def plot_cosine_model(k: np.ndarray, figure_number: int) -> None:
     plt.draw()
 
 
-@staticmethod
 def plot_rasters(spike_trains: List[np.ndarray], figure_number: Optional[int]) -> None:
     plt.figure(figure_number)
     plt.eventplot(spike_trains)
@@ -149,7 +151,6 @@ def plot_rasters(spike_trains: List[np.ndarray], figure_number: Optional[int]) -
     plt.draw()
 
 
-@staticmethod
 def _mask_pad(array: np.ndarray, max_length: int) -> np.ndarray:
     """
     Utility to create a masked array that fills to max_length
@@ -162,7 +163,6 @@ def _mask_pad(array: np.ndarray, max_length: int) -> np.ndarray:
     return masked_array
 
 
-@staticmethod
 def generate_inter_spike_interval_hist(
     spike_trains: np.ndarray,
     duration: int, # ms
@@ -194,7 +194,6 @@ def generate_inter_spike_interval_hist(
     return isi
 
 
-@staticmethod
 def generate_spike_time_hist(
     spike_trains: np.ndarray,
     duration: int, # ms

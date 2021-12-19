@@ -36,7 +36,9 @@ from nsimulate_util import (
     generate_inter_spike_interval_hist,
     generate_spike_time_hist,
     plot_rasters,
+    show,
 )
+import matplotlib.pyplot as plt
 from neuron import NeuronSimulator, SpikeDistribution
 from stimuli import ReachStimuli
 
@@ -84,7 +86,7 @@ def sim3_1():
         plot_rasters(rasters, figure_number=fig_num)
         fig_num += 1
 
-    reusing reach stimuli from pref list
+    # reusing reach stimuli from pref list
     reach_0 = pref_stimuli[0]
     reach_180 = pref_stimuli[4]
     rates_0 = []
@@ -181,8 +183,8 @@ def main(args):
     else:
         raise ValueError("Must pick a mode!")
 
-    # if show_plots:
-    #     plt.show()
+    if show_plots:
+        show()
 
 if __name__ == "__main__":
     """
