@@ -36,7 +36,6 @@ from stimuli import ReachStimuli
 
 def sim3_1_rate_func(reaches: ReachStimuli, preferred: ReachStimuli):
     result = 20 + 2*reaches.distances*np.cos(reaches.angles - preferred.angles[0])
-    result[result==0] = 0.000001
     return result
 
 
@@ -77,23 +76,24 @@ def sim3_1():
         rates = neuron.get_rates(reaches)
         rasters = list(neuron.generate_rasters(rates, milliseconds, 100, 0))
         neuron.plot_rasters(rasters, figure_number=fig_num)
+        break
         fig_num += 1
 
     # reusing reach stimuli from pref list
-    reach_0 = pref_stimuli[0]
-    reach_180 = pref_stimuli[4]
-    rates_0 = []
-    rates_180 = []
-    for neuron, pref_stimulus in zip(neurons, pref_stimuli):
-        rates_0.append(neuron.get_rates(reach_0))
-        rates_180.append(neuron.get_rates(reach_180))
+    # reach_0 = pref_stimuli[0]
+    # reach_180 = pref_stimuli[4]
+    # rates_0 = []
+    # rates_180 = []
+    # for neuron, pref_stimulus in zip(neurons, pref_stimuli):
+    #     rates_0.append(neuron.get_rates(reach_0))
+    #     rates_180.append(neuron.get_rates(reach_180))
 
-    plt.figure(99)
-    plt.plot(np.arange(len(neurons)), rates_0, label='0 deg.')
-    plt.plot(np.arange(len(neurons)), rates_180, label='180 deg.')
-    plt.xlabel("neuron #")
-    plt.ylabel("spikes/s")
-    plt.draw()
+    # plt.figure(99)
+    # plt.plot(np.arange(len(neurons)), rates_0, label='0 deg.')
+    # plt.plot(np.arange(len(neurons)), rates_180, label='180 deg.')
+    # plt.xlabel("neuron #")
+    # plt.ylabel("spikes/s")
+    # plt.draw()
 
 async def simulate_reaches():
     radians = np.deg2rad(np.linspace(0, 315, 8))

@@ -4,6 +4,7 @@ import time
 from typing import List, Callable, Generator, Optional
 import uuid
 from stimuli import Stimuli
+import matplotlib.pyplot as plt
 
 class SpikeDistribution(Enum):
     EXP = 0
@@ -25,7 +26,7 @@ class NeuronSimulator:
         plots=False,
     ):
         if plots:
-            import matplotlib.pyplot as plt
+            pass
         if distribution == SpikeDistribution.EXP:
             rand_func = lambda beta: np.random.exponential(beta)
         elif distribution == SpikeDistribution.GAMMA:
@@ -177,18 +178,19 @@ class NeuronSimulator:
         :param num_trials: number of trials (rasters to generate)
         :param start_time: "grounds" the spike events in absolutely. "spike n happens at time t."
         """
-        time_to_spike = self.rand_func(1000/spike_rates) # convert s to ms
+        with np.errstate(divide='ignore'):
+            betas = 1000/spike_rates # convert s to ms
         duration = np.sum(intervals)
         for i in range(0, num_trials):
             spike_train = []
             prev_t_spike = start_time
             dt = start_time
-            for rate, rand_result, interval in zip(spike_rates, time_to_spike, intervals):
+            for rate, beta, interval in zip(spike_rates, betas, intervals):
                 if rate > 0:
                     while dt <= duration and (dt - prev_t_spike) <= interval:
-                        dt += rand_result
+                        spike_delta = self.rand_func(beta)
+                        dt += spike_delta
                         spike_train.append(int(dt))
-
                 else:
                     dt += interval
 
