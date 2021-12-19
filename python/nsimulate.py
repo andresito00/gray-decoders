@@ -30,7 +30,13 @@ import binascii
 import sys
 import argparse
 import numpy as np
-from nsimulate_util import build_args, parse_mat_file
+from nsimulate_util import (
+    build_args,
+    parse_mat_file,
+    generate_inter_spike_interval_hist,
+    generate_spike_time_hist,
+    plot_rasters,
+)
 from neuron import NeuronSimulator, SpikeDistribution
 from stimuli import ReachStimuli
 
@@ -75,25 +81,26 @@ def sim3_1():
         neuron.assign_rate_func(sim3_1_rate_func, pref_stimulus)
         rates = neuron.get_rates(reaches)
         rasters = list(neuron.generate_rasters(rates, milliseconds, 100, 0))
-        neuron.plot_rasters(rasters, figure_number=fig_num)
-        break
+        plot_rasters(rasters, figure_number=fig_num)
         fig_num += 1
 
-    # reusing reach stimuli from pref list
-    # reach_0 = pref_stimuli[0]
-    # reach_180 = pref_stimuli[4]
-    # rates_0 = []
-    # rates_180 = []
-    # for neuron, pref_stimulus in zip(neurons, pref_stimuli):
-    #     rates_0.append(neuron.get_rates(reach_0))
-    #     rates_180.append(neuron.get_rates(reach_180))
+    reusing reach stimuli from pref list
+    reach_0 = pref_stimuli[0]
+    reach_180 = pref_stimuli[4]
+    rates_0 = []
+    rates_180 = []
+    for neuron, pref_stimulus in zip(neurons, pref_stimuli):
+        rates_0.append(neuron.get_rates(reach_0))
+        rates_180.append(neuron.get_rates(reach_180))
 
-    # plt.figure(99)
-    # plt.plot(np.arange(len(neurons)), rates_0, label='0 deg.')
-    # plt.plot(np.arange(len(neurons)), rates_180, label='180 deg.')
-    # plt.xlabel("neuron #")
-    # plt.ylabel("spikes/s")
-    # plt.draw()
+    if args.show:
+        import matplotlib.pyplot as plt
+        plt.figure(99)
+        plt.plot(np.arange(len(neurons)), rates_0, label='0 deg.')
+        plt.plot(np.arange(len(neurons)), rates_180, label='180 deg.')
+        plt.xlabel("neuron #")
+        plt.ylabel("spikes/s")
+        plt.draw()
 
 async def simulate_reaches():
     radians = np.deg2rad(np.linspace(0, 315, 8))
@@ -129,7 +136,7 @@ def main(args):
     if mode == 'file':
         parse_mat_file(args.mat_file)
 
-    elif mode == 'tune':
+    elif mode == 'tune_ex':
         neuron = NeuronSimulator(SpikeDistribution[args.rand])
         assert len(args.rates) == len(args.dirs)
         rates = np.asarray(args.rates).astype(np.float)
@@ -137,7 +144,7 @@ def main(args):
         rates = np.reshape(rates, (np.shape(rates)[0], 1))
         dirs = np.reshape(dirs, (np.shape(dirs)[0], 1))
 
-        neuron.tune_cosine_model(dirs=dirs, rates=rates, show_plots=show_plots)
+        neuron.tune_cosine_model(dirs=dirs, rates=rates)
 
     elif mode == 'synthetic':
         neuron = NeuronSimulator(SpikeDistribution[args.rand])
@@ -149,16 +156,16 @@ def main(args):
                     start_time=args.start_time or 0
                 ))
         if args.show:
-            neuron.plot_rasters(spike_trains, figure_number=0)
+            plot_rasters(spike_trains, figure_number=0)
 
-        neuron.generate_spike_time_hist(
+        generate_spike_time_hist(
             spike_trains=spike_trains,
             duration=sum(args.intervals),
             bin_size=args.bin_size,
             show_plots=show_plots,
             figure_number=1,
         )
-        neuron.generate_inter_spike_interval_hist(
+        generate_inter_spike_interval_hist(
             spike_trains=spike_trains,
             duration=sum(args.intervals),
             show_plots=show_plots,
@@ -174,8 +181,8 @@ def main(args):
     else:
         raise ValueError("Must pick a mode!")
 
-    if show_plots:
-        plt.show()
+    # if show_plots:
+    #     plt.show()
 
 if __name__ == "__main__":
     """
@@ -183,6 +190,4 @@ if __name__ == "__main__":
         python3 nsimulate --mode synthetic --rates 50 --intervals 2000 --bin-size 10 --num-trials 10 --rand EXP --show True
     """
     args = build_args()
-    if args.show:
-        import matplotlib.pyplot as plt
     main(args)

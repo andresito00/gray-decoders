@@ -4,7 +4,6 @@ import time
 from typing import List, Callable, Generator, Optional
 import uuid
 from stimuli import Stimuli
-import matplotlib.pyplot as plt
 
 class SpikeDistribution(Enum):
     EXP = 0
@@ -15,7 +14,6 @@ class NeuronError(Exception):
     pass
 
 class NeuronSimulator:
-
     def __init__(
         self,
         distribution: SpikeDistribution,
@@ -23,16 +21,12 @@ class NeuronSimulator:
         rate_func: Optional[Callable[[Stimuli], np.ndarray]] = None,
         preferred_stimulus: Optional[Stimuli] = None,
         group_name: str = "unk",
-        plots=False,
     ):
-        if plots:
-            pass
         if distribution == SpikeDistribution.EXP:
             rand_func = lambda beta: np.random.exponential(beta)
         elif distribution == SpikeDistribution.GAMMA:
             if scaling_factor is None:
-                raise NeuronError(
-                    "Gamma distribution type requires a scaling factor.")
+                raise NeuronError("Gamma distribution type requires a scaling factor.")
             shape = scaling_factor + 1
             rand_func = lambda beta: np.random.gamma(shape, beta)
         elif distribution == SpikeDistribution.POISSON:
@@ -63,23 +57,10 @@ class NeuronSimulator:
         return self.k[0][0] + self.k[1][0]*np.sin(theta) + \
                 self.k[2][0]*np.cos(theta)
 
-    def plot_cosine_model(self, figure_number: int) -> None:
-        theta = np.linspace(0, 2*np.pi, 80)
-        exp_firing_rates = self.k[0][0] + self.k[1][0]*np.sin(theta) + \
-                            self.k[2][0]*np.cos(theta)
-        plt.figure(figure_number)
-        plt.plot(dirs, rates, 'r*')
-        plt.plot(np.rad2deg(theta), exp_firing_rates)
-        plt.xlabel('angle (degrees)')
-        plt.ylabel('firing rate (spikes/s)')
-        plt.draw()
-
-
     def tune_cosine_model(
         self,
         dirs: np.array,
         rates: np.array,
-        show_plots: bool = False
     ) -> np.ndarray:
         """
         Takes an array of average firing rates of a neuron
@@ -137,7 +118,6 @@ class NeuronSimulator:
         self.preferred_stimulus = preferred_stimulus
         self.rate_func = rate_func
 
-
     def get_rates(self, stimuli: Stimuli) -> np.ndarray:
         """
         Wrapper function for the assigned rate func
@@ -147,14 +127,6 @@ class NeuronSimulator:
                 f"No rate function assigned to neuron {self.group}-{self.id}")
 
         return self.rate_func(stimuli, self.preferred_stimulus)
-
-    @staticmethod
-    def plot_rasters(spike_trains: List[np.ndarray], figure_number: Optional[int]) -> None:
-        plt.figure(figure_number)
-        plt.eventplot(spike_trains)
-        plt.xlabel("time (ms)")
-        plt.ylabel("sensor")
-        plt.draw()
 
     def generate_rasters(
         self,
@@ -197,92 +169,3 @@ class NeuronSimulator:
                 prev_t_spike = dt
 
             yield np.asarray(spike_train)
-
-    @staticmethod
-    def _mask_pad(array: np.ndarray, max_length: int) -> np.ndarray:
-        """
-        Utility to create a masked array that fills to max_length
-        """
-        ogLen = len(array)
-        assert ogLen <= max_length
-        masked_array = np.asarray(np.zeros(max_length))
-        for i in range(0, max_length):
-            masked_array[i] = array[i] if i < ogLen else np.ma.masked
-        return masked_array
-
-    @staticmethod
-    def generate_inter_spike_interval_hist(
-        spike_trains: np.ndarray,
-        duration: int, # ms
-        figure_number: Optional[int],
-        show_plots: bool = False,
-    ) -> List[np.ndarray]:
-        """
-        Creates a histogram of the inter-spike intervals in the provided rasters
-        """
-        isi = []
-        # max diff intervals length of the provided spike_trains
-        max_length = len(max(spike_trains, key=len)) - 1
-        for trial in spike_trains:
-            intervals = np.diff(trial)
-            current_length = len(intervals)
-            masked_intervals = intervals
-            if current_length < max_length:
-                masked_intervals = NeuronSimulator._mask_pad(intervals,
-                    max_length)
-            isi.append(masked_intervals)
-
-        if show_plots:
-            plt.figure(figure_number)
-            plt.hist(isi)
-            plt.xlabel('inter-spike interval (ms)')
-            plt.ylabel('# spikes')
-            plt.draw()
-
-        return isi
-
-    @staticmethod
-    def generate_spike_time_hist(
-        spike_trains: np.ndarray,
-        duration: int, # ms
-        bin_size: int, # ms
-        figure_number: Optional[int],
-        show_plots: bool = False,
-    ) -> np.ndarray:
-        """
-        Creates a histogram of the binned spike counts
-        from neurons modeled by the Poisson process for a given bin size.
-        """
-        num_trials = len(spike_trains)
-        start = 0
-        sentinel = start + bin_size
-        idx = 0;
-        num_bins = int(duration/bin_size)
-        spike_counts = np.zeros(num_bins, dtype=int)
-
-        while (sentinel < duration):
-            for trial in range(0, num_trials):
-                # find all values between start and stop for this trial
-                spike_counts[idx] += \
-                    np.where(
-                        np.logical_and(
-                            spike_trains[trial] >= start,
-                            spike_trains[trial] < sentinel)
-                        )[0].size
-
-            # now we'll take the average for this bin across all trials
-            # and increment our counters
-            spike_counts[idx] /= (bin_size * (10**(-3)) * num_trials)
-            start += bin_size
-            sentinel = start + bin_size
-            idx += 1
-
-        if show_plots:
-            plt.figure(figure_number)
-            plt.bar(
-                range(0, num_bins), spike_counts, align='center')
-            plt.xlabel(f"bins ({bin_size}s of ms)")
-            plt.ylabel("avg spike count")
-            plt.draw()
-
-        return spike_counts
