@@ -38,7 +38,6 @@ from nsimulate_util import (
     plot_rasters,
     show,
 )
-import matplotlib.pyplot as plt
 from neuron import NeuronSimulator, SpikeDistribution
 from stimuli import ReachStimuli
 
@@ -114,7 +113,6 @@ async def simulate_reaches():
         scaling_factor=2,
         rate_func=sim3_1_rate_func,
         preferred_stimulus=pref_stimulus,
-        plots=False
     )
     reaches = ReachStimuli(milliseconds, radians, centimeters)
     rates = neuron.get_rates(reaches)

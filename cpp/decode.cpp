@@ -22,11 +22,12 @@ void listens(std::string ip, uint16_t port,
 
 void decode(moodycamel::ConcurrentQueue<SpikeRaster_t> &q)
 {
+  size_t count = 0;
   while (true) {
     SpikeRaster_t found;
     bool result = q.try_dequeue(found);
     if (result) {
-      std::cout << "ID: " << std::hex << found.id << std::endl;
+      std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
