@@ -1,0 +1,10 @@
+*CMakeFiles*
+*Makefile*
+CMakeCache.txt
+decode
+.DS_Store
+build/
+__pycache__
+*.egg-info
+cpp/lib/*
+*.cmake
