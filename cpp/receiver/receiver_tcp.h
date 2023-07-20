@@ -8,16 +8,18 @@
 #include <concurrentqueue.h>
 #include "receiver.h"
 
+using namespace moodycamel;
+
 class ReceiverTcp
 {
  private:
   ReceiverStatus_e status_;
-  alignas(L1_CACHE_LINE_SIZE) uint8_t* buffer_;
   size_t size_;
   std::string ip_;
   uint16_t port_;
   int bind_socket_;
   int comm_socket_;
+  alignas(L1_CACHE_LINE_SIZE) uint8_t* buffer_;
 
   union {
     struct sockaddr_in server_address_;
@@ -28,7 +30,7 @@ class ReceiverTcp
     struct sockaddr client_address_alias_;
   };
 
-  SpikeRaster_t deserialize(size_t num_bytes);
+  struct SpikeRaster deserialize(size_t num_bytes);
 
  public:
   ReceiverTcp(std::string ip, uint16_t port, size_t buffer_size);
@@ -43,7 +45,7 @@ class ReceiverTcp
   ReceiverStatus_e initialize(void);
   // For now, this member function expects to receive on
   // spike raster structure boundaries. Should be made more robust.
-  ReceiverStatus_e receive(moodycamel::ConcurrentQueue<SpikeRaster_t>& q);
+  ReceiverStatus_e receive(ConcurrentQueue<struct SpikeRaster>& q);
   ReceiverStatus_e get_status(void);
   std::string get_ip(void);
   int get_port(void);

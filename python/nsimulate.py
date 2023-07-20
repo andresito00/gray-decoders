@@ -160,14 +160,14 @@ def main(args):
 
         generate_spike_time_hist(
             spike_trains=spike_trains,
-            duration=sum(args.intervals),
-            bin_size=args.bin_size,
+            duration_ms=sum(args.intervals),
+            bin_size_ms=args.bin_size,
             show_plots=show_plots,
             figure_number=1,
         )
         generate_inter_spike_interval_hist(
             spike_trains=spike_trains,
-            duration=sum(args.intervals),
+            duration_ms=sum(args.intervals),
             show_plots=show_plots,
             figure_number=2,
         )
@@ -186,8 +186,7 @@ def main(args):
 
 if __name__ == "__main__":
     """
-    Usage Examples:
-        python3 nsimulate --mode synthetic --rates 50 --intervals 2000 --bin-size 10 --num-trials 10 --rand EXP --show True
+    Run with --help/-h for a usage example.
     """
     args = build_args()
     main(args)
