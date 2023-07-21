@@ -1,7 +1,4 @@
 #!/bin/bash
-# https://stackoverflow.com/questions/51326844/exclude-directory-clang-format
-# https://stackoverflow.com/questions/55965712/how-do-i-add-clang-formatting-to-pre-commit-hook
-
 folder=.
 format_files=\
 `find -E . \

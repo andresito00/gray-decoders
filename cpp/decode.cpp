@@ -3,40 +3,42 @@
 #include <chrono>
 #include <memory>
 #include <unistd.h>
-#include <tclap/CmdLine.h>
 #include <util.h>
-#include <receiver_tcp.h>
+#include <receiver.h>
+#include <tcp.h>
 #include <concurrentqueue.h>
+#include <tclap/CmdLine.h>
 
 using namespace moodycamel;
 using namespace TCLAP;
 
-void receive(std::string ip, uint16_t port, ConcurrentQueue<struct SpikeRaster> &q)
+template<typename Q>
+void receive(Q& q)
 {
-  ReceiverTcp *receiver = new ReceiverTcp(ip, port, 4096);
-  receiver->initialize();
-  ReceiverStatus_e status = receiver->receive(q);
-  // thread lives in receive
-  if (status == RECEIVER_STATUS_ERROR) {
+  Receiver<LinuxTCPCore, Q> *receiver = new Receiver<LinuxTCPCore, Q>(4096);
+  if (ReceiverStatus::kOkay == receiver->get_status()) {
+    receiver->Receive(q);
+  } else {
+    delete receiver;
     exit(EXIT_FAILURE);
   }
 }
 
-void decode(ConcurrentQueue<struct SpikeRaster> &q)
+template<typename Q>
+void decode(Q& q)
 {
   size_t count = 0;
   while (true) {
     struct SpikeRaster found;
-    bool result = q.try_dequeue(found);
-    if (result) {
-      std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
-    }
-    // bug in clang-tidy-12 spaceship operator parsing...
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    std::this_thread::sleep_until(
-      std::chrono::system_clock::now() +
-      std::chrono::milliseconds(1)
-    );
+    while(!q.try_dequeue(found)); // block this thread here
+    std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
+    // bug in clang-tidy-12 spaceship operator parsing:
+    //  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    // workaround:
+     std::this_thread::sleep_until(
+       std::chrono::system_clock::now() +
+       std::chrono::milliseconds(1)
+     );
   }
 }
 
@@ -70,16 +72,18 @@ int main(int argc, char *argv[])
   //  accessible runtime configuration given args/initialization input
   //  initialize receiver process
   auto q = ConcurrentQueue<struct SpikeRaster>();
-
-  auto decodes = std::thread(decode, std::ref(q));  // spawn new thread that calls bar(0)
-  auto receives = std::thread(receive, ip, port, std::ref(q));
+  auto decodes = std::thread(decode<ConcurrentQueue<struct SpikeRaster>>, std::ref(q));
+  auto receives = std::thread(receive<ConcurrentQueue<struct SpikeRaster>>, std::ref(q));
 
   std::cout << "Now executing concurrently...\n" << std::endl;
 
-  // synchronize threads:
-  decodes.join();   // pauses until second finishes
-  receives.join();  // pauses until first finishes
+  // todo: write a logging thread instead of using stdout.
+  // this will ensure we're not trapping into the OS to provide debug output in the middle
+  // of performance critical compute.
 
+  // synchronize threads:
+  // decodes.join();   // pauses until second finishes
+  // receives.join();  // pauses until first finishes
 
   //  initialize learner process
 

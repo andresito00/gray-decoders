@@ -7,6 +7,4 @@ class RuntimeConfig
   std::string raster_file;
   std::string kinematic_data_file;
   size_t bin_size;
-
- public:
 };

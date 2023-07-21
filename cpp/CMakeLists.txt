@@ -6,6 +6,7 @@ include_directories(SYSTEM lib/tclap/include/)
 include_directories(SYSTEM lib/concurrentqueue/)
 include_directories(receiver/)
 include_directories(util/)
+include_directories(net/)
 
 set(decoder_src decode.cpp)
 
@@ -34,8 +35,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 # TODO: -Wlifetime
 
 # in order of "least" to "most" dependent
-add_subdirectory(util)
-add_subdirectory(receiver)
+# add_subdirectory(util)
+# add_subdirectory(receiver)
+add_subdirectory(net)
 
 
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
@@ -49,6 +51,7 @@ add_executable(decode ${decoder_src})
 target_link_libraries(
   decode
 
-  receiver
+  # receiver
+  net
   pthread
 )
