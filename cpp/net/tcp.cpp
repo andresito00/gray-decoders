@@ -1,5 +1,7 @@
+#include <iostream>
 #include <vector>
 #include <string>
+#include <string.h>
 #include <algorithm>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -7,12 +9,14 @@
 #include <unistd.h>
 #include "tcp.h"
 
-ssize_t LinuxTCPCore::Receive(std::vector<unsigned char>& buffer, size_t num_bytes) {
+static inline void log(std::string file, int line, char *msg) {
+    std::cout << file << ":" << line << ": " <<  msg << std::endl;
+}
+
+ssize_t LinuxTCPCore::Receive(unsigned char *buffer, size_t num_bytes) {
     // TODO: Use select
-    buffer.resize(std::min(num_bytes, buffer.size()));
-    ssize_t bytes_received = recv(comm_socket_, buffer.data(), buffer.size(), 0);
-    if (bytes_received > 0) {
-        buffer.resize(std::min(static_cast<size_t>(bytes_received), buffer.size()));
+    ssize_t bytes_received = recv(comm_socket_, buffer, num_bytes, 0);
+    if (bytes_received > 0 && (bytes_received == static_cast<size_t>(bytes_received))) {
         status_ = NetCoreStatus::kOkay;
     } else if (bytes_received < 0) {
         status_ = NetCoreStatus::kError;
@@ -21,12 +25,12 @@ ssize_t LinuxTCPCore::Receive(std::vector<unsigned char>& buffer, size_t num_byt
 }
 
 LinuxTCPCore::LinuxTCPCore(void) {
-    ip_ = "127.0.0.1";
-    port_ = 8080;
+    ip_ = "0.0.0.0";
+    port_ = 8808;
     bind_socket_ = socket(AF_INET, SOCK_STREAM, 0);
 
     if (bind_socket_ == 0) {
-      // std::cout << strerror(errno) << std::endl;
+      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
       return;
     }
@@ -35,7 +39,7 @@ LinuxTCPCore::LinuxTCPCore(void) {
     int ret =
         setsockopt(bind_socket_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     if (ret < 0) {
-      // std::cout << strerror(errno) << std::endl;
+      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
       return;
     }
@@ -48,15 +52,15 @@ LinuxTCPCore::LinuxTCPCore(void) {
     ret =
         bind(bind_socket_, &server_address_alias_, sizeof(server_address_alias_));
     if (ret < 0) {
-      // std::cout << strerror(errno) << std::endl;
+      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
       return;
     }
 
-    // std::cout << "Listening..." << std::endl;
+    log(__FILE__, __LINE__, "Listening...");
     ret = listen(bind_socket_, 1);
     if (ret < 0) {
-      // std::cout << strerror(errno) << std::endl;
+      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
       return;
     }
@@ -64,24 +68,24 @@ LinuxTCPCore::LinuxTCPCore(void) {
     socklen_t client_addr_len = sizeof(client_address_alias_);
     comm_socket_ = accept(bind_socket_, &client_address_alias_, &client_addr_len);
     if (comm_socket_ < 0) {
-      // std::cout << strerror(errno) << std::endl;
+      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
       return;
     }
-
+    log(__FILE__, __LINE__, "Socket ready...");
     status_ = NetCoreStatus::kOkay;
 }
 
 LinuxTCPCore::~LinuxTCPCore(void) {
     int ret = close(comm_socket_);
     if (ret < 0) {
-      // std::cout << strerror(errno) << std::endl;
+        log(__FILE__, __LINE__,  strerror(errno));
         status_ = NetCoreStatus::kError;
     }
 
     ret = close(bind_socket_);
     if (ret < 0) {
-      // std::cout << strerror(errno) << std::endl;
+        log(__FILE__, __LINE__,  strerror(errno));
         status_ = NetCoreStatus::kError;
     }
 }

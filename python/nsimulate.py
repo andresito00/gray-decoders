@@ -79,6 +79,9 @@ def sim3_1():
 
     fig_num = 0
     for neuron, pref_stimulus in zip(neurons, pref_stimuli):
+        # Still not 100% committed to a neuron owning its rate function.
+        # Conceptually makes sense. Computationally, adds overhead...
+        # For now, a neuron is pretty much just a random distribution...
         neuron.assign_rate_func(sim3_1_rate_func, pref_stimulus)
         rates = neuron.get_rates(reaches)
         rasters = list(neuron.generate_rasters(rates, milliseconds, 100, 0))
@@ -121,7 +124,10 @@ async def simulate_reaches():
     _, writer = await asyncio.open_connection('127.0.0.1', 8808)
     print('Connection open...')
     count = 0
-    for raster in neuron.generate_rasters(rates, milliseconds, num_trials=100, start_time=0):
+    for r, raster in enumerate(neuron.generate_rasters(rates, milliseconds, num_trials=100, start_time=0)):
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        for i in raster:
+            print(i)
         raster_bytes = struct.pack(f'Q{len(raster)}QI', 0xFF, *raster, 0xdeadbeef)
         writer.write(raster_bytes)
 
@@ -151,7 +157,7 @@ def main(args):
         assert len(args.intervals) == len(args.rates)
         spike_trains = list(neuron.generate_rasters(
                     spike_rates=np.asarray(args.rates),
-                    intervals=np.asarray(args.intervals),
+                    intervals_ms=np.asarray(args.intervals),
                     num_trials=args.num_trials,
                     start_time=args.start_time or 0
                 ))

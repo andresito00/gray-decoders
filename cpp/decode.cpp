@@ -28,17 +28,22 @@ template<typename Q>
 void decode(Q& q)
 {
   size_t count = 0;
+  struct SpikeRaster found;
   while (true) {
-    struct SpikeRaster found;
-    while(!q.try_dequeue(found)); // block this thread here
-    std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
+    if (q.try_dequeue(found)) {
+      std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
+      for (auto& v: found.raster) {
+        std::cout << "\t" << std::dec << v << std::endl;
+      }
+    } // block this thread here
+
     // bug in clang-tidy-12 spaceship operator parsing:
     //  std::this_thread::sleep_for(std::chrono::milliseconds(1));
     // workaround:
-     std::this_thread::sleep_until(
-       std::chrono::system_clock::now() +
-       std::chrono::milliseconds(1)
-     );
+    // std::this_thread::sleep_until(
+    //   std::chrono::system_clock::now() +
+    //   std::chrono::milliseconds(10)
+    // );
   }
 }
 
@@ -82,8 +87,8 @@ int main(int argc, char *argv[])
   // of performance critical compute.
 
   // synchronize threads:
-  // decodes.join();   // pauses until second finishes
-  // receives.join();  // pauses until first finishes
+  decodes.join();   // pauses until second finishes
+  receives.join();  // pauses until first finishes
 
   //  initialize learner process
 

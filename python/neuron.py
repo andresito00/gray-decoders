@@ -131,7 +131,7 @@ class NeuronSimulator:
     def generate_rasters(
         self,
         spike_rates: np.ndarray, # spikes/s
-        intervals: np.ndarray,   # ms
+        intervals_ms: np.ndarray,   # ms
         num_trials: int,
         start_time: int, # ms
     ) -> Generator[np.ndarray, None, None]:
@@ -139,25 +139,24 @@ class NeuronSimulator:
         The "workhorse" of the NeuronSimulator class. This one should be optimized to produce.
         rasters.
 
-        Note a real neuron's refractory period is O(ms) so take this into consideration when
-        trying to model real behavior at a large scale.
+        Note a real neuron's refractory period is on the order of ms.
 
         The following generates and returns spike rasters by using
         delta-t from a random exponential distribution characterized by...
 
         :param spike_rates: the firing rate of a neuron
-        :param intervals: the duration for each spike rate (1:1 mapping)
+        :param intervals_ms: the duration for each spike rate (1:1 mapping)
         :param num_trials: number of trials (rasters to generate)
         :param start_time: "grounds" the spike events in absolutely. "spike n happens at time t."
         """
         with np.errstate(divide='ignore'):
             betas = 1000/spike_rates # convert s to ms
-        duration = np.sum(intervals)
+        duration = np.sum(intervals_ms)
         for i in range(0, num_trials):
             spike_train = []
             prev_t_spike = start_time
             dt = start_time
-            for rate, beta, interval in zip(spike_rates, betas, intervals):
+            for rate, beta, interval in zip(spike_rates, betas, intervals_ms):
                 if rate > 0:
                     while dt <= duration and (dt - prev_t_spike) <= interval:
                         spike_delta = self.rand_func(beta)

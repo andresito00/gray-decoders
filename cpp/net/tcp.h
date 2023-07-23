@@ -10,7 +10,7 @@ class LinuxTCPCore {
  public:
   LinuxTCPCore();
   ~LinuxTCPCore();
-  ssize_t Receive(std::vector<unsigned char>& buffer, size_t num_bytes);
+  ssize_t Receive(unsigned char *buffer, size_t num_bytes);
   NetCoreStatus get_status(void);
  protected:
  private:
