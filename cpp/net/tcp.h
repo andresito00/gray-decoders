@@ -1,10 +1,10 @@
-#ifndef DECODER_TCP_CORE_H_
-#define DECODER_TCP_CORE_H_
+#ifndef DECODER_NET_TCP_H_
+#define DECODER_NET_TCP_H_
 
 #include <vector>
 #include <string>
 #include <arpa/inet.h>
-#include "core.h"
+#include "net_core.h"
 
 class LinuxTCPCore {
  public:
@@ -29,4 +29,4 @@ class LinuxTCPCore {
   };
 };
 
-#endif // DECODER_TCP_CORE_H_
+#endif // DECODER_NET_TCP_H_

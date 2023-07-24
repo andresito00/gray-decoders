@@ -7,8 +7,8 @@
 #include <array>
 #include <climits>
 #include <string.h>
-#include <util.h>
-#include <core.h>
+#include <raster.h>
+#include <net_core.h>
 
 enum class ReceiverStatus {
   kError = -1,
@@ -18,7 +18,7 @@ enum class ReceiverStatus {
 
 constexpr int kFailLimit = 5;
 
-template<class T, class Q>
+template<class T, class Q, class S = SpikeRaster64>
 class Receiver
 {
  public:
@@ -48,25 +48,25 @@ class Receiver
   ReceiverStatus Receive(Q &q) {
     status_ = ReceiverStatus::kOkay;
     while (!stop_rx_) {
+
       size_t populated_bytes = rx_buffer_.size();
       rx_buffer_.resize(size_);
+
       ssize_t bytes_received = net_core_.Receive(
         rx_buffer_.data() + populated_bytes, size_ - populated_bytes
       );
+
       if (bytes_received > 0) {
         if (static_cast<size_t>(bytes_received) < size_) {
           rx_buffer_.resize(bytes_received);
         }
-        std::vector<struct SpikeRaster> rasters = SpikeRaster::deserialize(rx_buffer_);
-        std::cout << "NQing " << rasters.size() << std::endl;
-        for (auto& v: rasters) {
-          q.enqueue(v); // use batch enqueue...
-        }
-        // ...
-        // rx_buffer_ either should have either no rasters or the start of one at this point.
+
+        std::vector<S> rasters = S::deserialize(rx_buffer_);
+        q.enqueue_bulk(rasters.begin(), rasters.size()); // use batch enqueue...
+        // rx_buffer_ either should have either no rasters OR the first part of one at this point.
+
       } else if (bytes_received < 0) {
-        ++fail_count_;
-        if (fail_count_ > kFailLimit) {
+        if (++fail_count_ > kFailLimit) {
           status_ = ReceiverStatus::kError;
           break;
         }

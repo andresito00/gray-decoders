@@ -6,7 +6,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
   execute_process(COMMAND sysctl hw.cachelinesize OUTPUT_VARIABLE L1_CACHE_LINE_SIZE)
 endif()
-string(REGEX MATCH "([1-9][0-9]*)" L1_CACHE_LINE_SIZE "${L1_CACHE_LINE_SIZE}")
+string(REGEX MATCH "([1-9][0-9]*)" L1_CACHE_LINE_SIZE "${CONFIG_L1_CACHE_LINE_SIZE}")
 
 add_subdirectory (c)
 add_subdirectory (cpp)

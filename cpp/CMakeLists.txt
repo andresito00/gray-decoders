@@ -5,7 +5,7 @@ project(gray-decoders-exe)
 include_directories(SYSTEM lib/tclap/include/)
 include_directories(SYSTEM lib/concurrentqueue/)
 include_directories(receiver/)
-include_directories(util/)
+include_directories(data/)
 include_directories(net/)
 
 set(decoder_src decode.cpp)

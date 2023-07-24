@@ -1,9 +1,10 @@
 #include <iostream>
+#include <csignal>
 #include <thread>
 #include <chrono>
 #include <memory>
 #include <unistd.h>
-#include <util.h>
+#include <raster.h>
 #include <receiver.h>
 #include <tcp.h>
 #include <concurrentqueue.h>
@@ -27,23 +28,22 @@ void receive(Q& q)
 template<typename Q>
 void decode(Q& q)
 {
+  SpikeRaster64 found;
   size_t count = 0;
-  struct SpikeRaster found;
   while (true) {
-    if (q.try_dequeue(found)) {
-      std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
-      for (auto& v: found.raster) {
-        std::cout << "\t" << std::dec << v << std::endl;
-      }
-    } // block this thread here
-
+    while (!q.try_dequeue(found)) {
     // bug in clang-tidy-12 spaceship operator parsing:
     //  std::this_thread::sleep_for(std::chrono::milliseconds(1));
     // workaround:
-    // std::this_thread::sleep_until(
-    //   std::chrono::system_clock::now() +
-    //   std::chrono::milliseconds(10)
-    // );
+      std::this_thread::sleep_until(
+        std::chrono::system_clock::now() +
+        std::chrono::microseconds(256)
+      ); // block this thread here
+    }
+    std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
+    for (auto r: found.raster) {
+      std::cout << "\t" << std::dec << r << std::endl;
+    }
   }
 }
 
@@ -76,9 +76,9 @@ int main(int argc, char *argv[])
   // main routine should eventually be:
   //  accessible runtime configuration given args/initialization input
   //  initialize receiver process
-  auto q = ConcurrentQueue<struct SpikeRaster>();
-  auto decodes = std::thread(decode<ConcurrentQueue<struct SpikeRaster>>, std::ref(q));
-  auto receives = std::thread(receive<ConcurrentQueue<struct SpikeRaster>>, std::ref(q));
+  auto raster_queue = ConcurrentQueue<SpikeRaster64>();
+  auto decodes = std::thread(decode<ConcurrentQueue<SpikeRaster64>>, std::ref(raster_queue));
+  auto receives = std::thread(receive<ConcurrentQueue<SpikeRaster64>>, std::ref(raster_queue));
 
   std::cout << "Now executing concurrently...\n" << std::endl;
 

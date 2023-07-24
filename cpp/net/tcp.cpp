@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include "tcp.h"
+#include "net_core.h"
 
 static inline void log(std::string file, int line, char *msg) {
     std::cout << file << ":" << line << ": " <<  msg << std::endl;

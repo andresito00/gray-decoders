@@ -105,8 +105,8 @@ def sim3_1():
         plt.xlabel("neuron #")
         plt.ylabel("spikes/s")
         plt.draw()
-
-async def simulate_reaches():
+import time
+async def simulate_reaches(num_trials: int):
     radians = np.deg2rad(np.linspace(0, 315, 8))
     milliseconds = np.ones(radians.shape)*500
     centimeters = np.ones(radians.shape)*10
@@ -124,11 +124,14 @@ async def simulate_reaches():
     _, writer = await asyncio.open_connection('127.0.0.1', 8808)
     print('Connection open...')
     count = 0
-    for r, raster in enumerate(neuron.generate_rasters(rates, milliseconds, num_trials=100, start_time=0)):
+    for r, raster in enumerate(neuron.generate_rasters(
+        rates, milliseconds, num_trials=num_trials, start_time=0)
+    ):
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         for i in raster:
             print(i)
-        raster_bytes = struct.pack(f'Q{len(raster)}QI', 0xFF, *raster, 0xdeadbeef)
+        raster_bytes = struct.pack(f'Q{len(raster)}QI', 0x12, *raster, 0xdeadbeef)
+        # time.sleep(0.001);
         writer.write(raster_bytes)
 
     print('Closing the connection...')
@@ -182,7 +185,7 @@ def main(args):
         sim3_1()
 
     elif mode == 'simulate':
-        asyncio.run(simulate_reaches())
+        asyncio.run(simulate_reaches(num_trials=args.num_trials))
 
     else:
         raise ValueError("Must pick a mode!")
