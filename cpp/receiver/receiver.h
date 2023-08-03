@@ -10,6 +10,9 @@
 #include <raster.h>
 #include <net_core.h>
 
+using SpikeRaster64 = raster::SpikeRaster64;
+
+
 enum class ReceiverStatus {
   kError = -1,
   kOkay,

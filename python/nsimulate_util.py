@@ -243,8 +243,7 @@ def generate_spike_time_hist(
 
     if show_plots:
         plt.figure(figure_number)
-        plt.bar(
-            range(0, num_bins), spike_counts, align='center')
+        plt.bar(range(0, num_bins), spike_counts, align='center')
         plt.xlabel(f"bins ({bin_size_ms}s of ms)")
         plt.ylabel("avg spike count")
         plt.draw()

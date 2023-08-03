@@ -147,7 +147,7 @@ class NeuronSimulator:
         :param spike_rates: the firing rate of a neuron
         :param intervals_ms: the duration for each spike rate (1:1 mapping)
         :param num_trials: number of trials (rasters to generate)
-        :param start_time: "grounds" the spike events in absolutely. "spike n happens at time t."
+        :param start_time: "spike n happens at time start_time + t."
         """
         with np.errstate(divide='ignore'):
             betas = 1000/spike_rates # convert s to ms

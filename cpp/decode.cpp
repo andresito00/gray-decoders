@@ -10,8 +10,12 @@
 #include <concurrentqueue.h>
 #include <tclap/CmdLine.h>
 
-using namespace moodycamel;
-using namespace TCLAP;
+using SpikeRaster64 = raster::SpikeRaster64;
+using RasterQueue = moodycamel::ConcurrentQueue<raster::SpikeRaster64>;
+using CmdLine = TCLAP::CmdLine;
+using StringArg = TCLAP::ValueArg<std::string>;
+using UShortArg = TCLAP::ValueArg<uint16_t>;
+using ArgException = TCLAP::ArgException;
 
 template<typename Q>
 void receive(Q& q)
@@ -28,7 +32,7 @@ void receive(Q& q)
 template<typename Q>
 void decode(Q& q)
 {
-  SpikeRaster64 found;
+  raster::SpikeRaster64 found;
   size_t count = 0;
   while (true) {
     while (!q.try_dequeue(found)) {
@@ -53,9 +57,9 @@ int main(int argc, char *argv[])
   uint16_t port;
   try {
     CmdLine cmd("CLI interface to launch the decoder", ' ', "0.0");
-    ValueArg<std::string> arg_ip("i", "ip", "IP address to bind to",
+    StringArg arg_ip("i", "ip", "IP address to bind to",
                                         true, "", "string");
-    ValueArg<uint16_t> arg_port("p", "port", "Port to listen on", true,
+    UShortArg arg_port("p", "port", "Port to listen on", true,
                                        8080, "int");
 
     cmd.add(arg_ip);
@@ -76,9 +80,9 @@ int main(int argc, char *argv[])
   // main routine should eventually be:
   //  accessible runtime configuration given args/initialization input
   //  initialize receiver process
-  auto raster_queue = ConcurrentQueue<SpikeRaster64>();
-  auto decodes = std::thread(decode<ConcurrentQueue<SpikeRaster64>>, std::ref(raster_queue));
-  auto receives = std::thread(receive<ConcurrentQueue<SpikeRaster64>>, std::ref(raster_queue));
+  auto raster_queue = RasterQueue();
+  auto decodes = std::thread(decode<RasterQueue>, std::ref(raster_queue));
+  auto receives = std::thread(receive<RasterQueue>, std::ref(raster_queue));
 
   std::cout << "Now executing concurrently...\n" << std::endl;
 
