@@ -73,10 +73,9 @@ struct SpikeRaster {
     auto delim_end = kDelimiter.end();
     auto range_start = buff.begin();
     auto range_end = buff.end();
-    auto found = std::search(range_start, range_end, delim_start, delim_end);
+    auto found = range_end;
 
-    while(found != range_end) {
-    // while ((found = std::search(range_start, range_end, delim_start, delim_end)) != range_end) {
+    while ((found = std::search(range_start, range_end, delim_start, delim_end)) != range_end) {
       SpikeRaster<T> current;
 
       // todo: Templatize SpikeRaster on integer type and make this generic...
@@ -94,11 +93,6 @@ struct SpikeRaster {
 
       range_start = buff.begin();
       range_end = buff.end();
-      if (buff.size() > 0) {
-        found = std::search(range_start, range_end, delim_start, delim_end);
-      } else {
-        break;
-      }
     }
     return result;
   }

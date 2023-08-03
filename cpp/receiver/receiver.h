@@ -61,7 +61,7 @@ class Receiver
 
       if (bytes_received > 0) {
         if (static_cast<size_t>(bytes_received) < size_) {
-          rx_buffer_.resize(bytes_received);
+          rx_buffer_.resize(static_cast<size_t>(bytes_received));
         }
 
         std::vector<S> rasters = S::deserialize(rx_buffer_);
