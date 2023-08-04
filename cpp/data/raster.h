@@ -4,13 +4,13 @@
 #include <vector>
 #include <string>
 #include <climits>
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
+#include <cstdint>
 #include <iterator>
 #include <iostream>
+#include <string.h>
 
-constexpr std::array<unsigned char, 4> kDelimiter{ 0xEF, 0xBE, 0xAD, 0xDE };
+constexpr static std::array<unsigned char, 4> kDelimiter{ 0xEF, 0xBE, 0xAD, 0xDE };
+constexpr static size_t kDefaultSpikeTrainSize{64};
 
 namespace raster {
 
@@ -19,6 +19,9 @@ struct SpikeRaster {
   T id;
   std::vector<T> raster;  // 1-D array of event times
   SpikeRaster() noexcept: id{-1LU}, raster{{}} {}
+  SpikeRaster(size_t sz) noexcept: id{-1LU}, raster{std::move(std::vector<T>(sz, 0))} {}
+  SpikeRaster(T id, size_t sz) noexcept: id{id}, raster{std::move(std::vector<T>(sz, 0))} {}
+  SpikeRaster(T id, std::vector<T>&& raster) noexcept: id{id}, raster{std::move(raster)} {}
   SpikeRaster(SpikeRaster& other) noexcept: id{other.id}, raster{other.raster} {}
   SpikeRaster(SpikeRaster&& other) noexcept: id{-1LU}, raster{{}} {
     id = other.id;
@@ -56,8 +59,8 @@ struct SpikeRaster {
     return id;
   }
 
-  size_t size() const {
-    return sizeof(SpikeRaster);
+  size_t raster_size() const {
+    return raster.size();
   }
 
   void clear() {
@@ -66,7 +69,7 @@ struct SpikeRaster {
   }
 
   static std::vector<SpikeRaster<T>> deserialize(std::vector<unsigned char>& buff) {
-    // todo: read up on better c++ deserialization patterns...
+    // todo: read up on better c++ deserialization patterns... consider moving out of struct.
     // This is also assuming well-behaved input from the network. Needs more sanitizing.
     std::vector<SpikeRaster<T>> result{};
     auto delim_start = kDelimiter.begin();
@@ -74,30 +77,25 @@ struct SpikeRaster {
     auto range_start = buff.begin();
     auto range_end = buff.end();
     auto found = range_end;
-
     while ((found = std::search(range_start, range_end, delim_start, delim_end)) != range_end) {
-      SpikeRaster<T> current;
 
-      // todo: Templatize SpikeRaster on integer type and make this generic...
-      current.id = *(reinterpret_cast<const T*>(&(*range_start))); // ugly as sin, must fix
-      const unsigned char *raster_start = &(*range_start) + sizeof(current.id);
+      auto id = *(T *) buff.data();
+      const unsigned char *raster_start = buff.data() + sizeof(id);
+      auto raster_bytes = static_cast<size_t>(found - (range_start + sizeof(id)));
 
-      size_t raster_bytes = found - (range_start + offsetof(SpikeRaster<T>, raster));
-      current.raster.resize(raster_bytes / sizeof(T));
-      memcpy(current.raster.data(), raster_start, raster_bytes);
+      std::vector<T> current(raster_bytes / sizeof(T), 0);
+      memcpy(current.data(), raster_start, raster_bytes);
 
-      result.emplace_back(std::move(current));
+      result.emplace_back(SpikeRaster<T>(id, std::move(current)));
 
-      // update buff start pointer
       buff.erase(range_start, found + kDelimiter.size());
-
       range_start = buff.begin();
       range_end = buff.end();
     }
+
     return result;
   }
 };
-
 
 using SpikeRaster64 = struct SpikeRaster<uint64_t> ;
 
