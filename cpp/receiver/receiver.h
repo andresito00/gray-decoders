@@ -26,7 +26,6 @@ class Receiver
 {
  public:
   ~Receiver() {}
-  // ReceiverTcp is a resource handle, so we should...
   Receiver(Receiver&& a) = delete;
   Receiver(const Receiver& a) = delete;
   Receiver& operator=(Receiver&& a) = delete;
@@ -48,7 +47,7 @@ class Receiver
 
   // For now, this member function expects to receive on
   // spike raster structure boundaries. Should be made more robust.
-  ReceiverStatus Receive(Q &q) {
+  ReceiverStatus receive(Q &q) {
     status_ = ReceiverStatus::kOkay;
     while (!stop_rx_) {
 
@@ -79,7 +78,7 @@ class Receiver
     return ReceiverStatus::kStopped;
   }
 
-  ReceiverStatus Stop(void) {
+  ReceiverStatus stop(void) {
     stop_rx_ = true;
   }
 

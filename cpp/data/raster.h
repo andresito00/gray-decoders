@@ -80,10 +80,11 @@ struct SpikeRaster {
     while ((found = std::search(range_start, range_end, delim_start, delim_end)) != range_end) {
 
       auto id = *(T *) buff.data();
-      const unsigned char *raster_start = buff.data() + sizeof(id);
-      auto raster_bytes = static_cast<size_t>(found - (range_start + sizeof(id)));
+      range_start += sizeof(id);
+      auto raster_bytes = static_cast<size_t>(found - range_start);
 
       std::vector<T> current(raster_bytes / sizeof(T), 0);
+      const unsigned char *raster_start = buff.data() + sizeof(id);
       memcpy(current.data(), raster_start, raster_bytes);
 
       result.emplace_back(SpikeRaster<T>(id, std::move(current)));

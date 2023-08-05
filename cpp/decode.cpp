@@ -22,7 +22,7 @@ void receive(Q& q)
 {
   Receiver<LinuxTCPCore, Q> *receiver = new Receiver<LinuxTCPCore, Q>(4096);
   if (ReceiverStatus::kOkay == receiver->get_status()) {
-    receiver->Receive(q);
+    receiver->receive(q);
   } else {
     delete receiver;
     exit(EXIT_FAILURE);
@@ -32,7 +32,7 @@ void receive(Q& q)
 template<typename Q>
 void decode(Q& q)
 {
-  raster::SpikeRaster64 found;
+  SpikeRaster64 found;
   size_t count = 0;
   while (true) {
     while (!q.try_dequeue(found)) {
