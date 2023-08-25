@@ -8,10 +8,9 @@
 #include <iterator>
 #include <string.h>
 
-constexpr static std::array<unsigned char, 4> kDelimiter{ 0xEF, 0xBE, 0xAD, 0xDE };
-constexpr static size_t kDefaultSpikeTrainSize{64};
-
 namespace raster {
+
+constexpr static std::array<unsigned char, 4> kDelimiter{ 0xEF, 0xBE, 0xAD, 0xDE };
 
 template<typename T>
 struct SpikeRaster {
@@ -64,32 +63,32 @@ struct SpikeRaster {
     raster.clear();
   }
 
-  static std::vector<SpikeRaster<T>> deserialize(std::vector<unsigned char>& buff) {
+  static size_t deserialize(const std::vector<unsigned char>& buff, std::vector<SpikeRaster<T>>& result) {
     // todo: read up on better c++ deserialization patterns... consider moving out of struct.
     // This is also assuming well-behaved input from the network. Needs more sanitizing.
-    std::vector<SpikeRaster<T>> result{};
     auto delim_start = kDelimiter.begin();
     auto delim_end = kDelimiter.end();
     auto range_start = buff.begin();
     auto range_end = buff.end();
     auto found = range_end;
+    size_t bytes_deserialized = 0;
     while ((found = std::search(range_start, range_end, delim_start, delim_end)) != range_end) {
-
+      // deserialize the id
       auto id = *(T *) buff.data();
       range_start += sizeof(id);
+
+      // deserialize the raster event times
       auto raster_bytes = static_cast<size_t>(found - range_start);
-
       std::vector<T> current(raster_bytes / sizeof(T), 0);
-      const unsigned char *raster_start = buff.data() + sizeof(id);
-      memcpy(current.data(), raster_start, raster_bytes);
-      result.emplace_back(SpikeRaster<T>(id, std::move(current)));
+      memcpy(current.data(), buff.data() + sizeof(id), raster_bytes);
+      result.emplace_back(SpikeRaster<T>{id, std::move(current)});
 
-      buff.erase(buff.begin(), found + kDelimiter.size());
-      range_start = buff.begin();
-      range_end = buff.end();
+      // housekeeping for the return value, and updating the start iterator
+      bytes_deserialized += (sizeof(id) + raster_bytes + kDelimiter.size());
+      range_start = found + kDelimiter.size();
     }
 
-    return result;
+    return bytes_deserialized;
   }
 };
 

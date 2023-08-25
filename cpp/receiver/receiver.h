@@ -50,7 +50,6 @@ class Receiver
   ReceiverStatus receive(Q &q) {
     status_ = ReceiverStatus::kOkay;
     while (!stop_rx_) {
-
       size_t populated_bytes = rx_buffer_.size();
       rx_buffer_.resize(size_);
 
@@ -62,10 +61,10 @@ class Receiver
         if (static_cast<size_t>(bytes_received) < size_) {
           rx_buffer_.resize(static_cast<size_t>(bytes_received));
         }
-
-        std::vector<S> rasters = S::deserialize(rx_buffer_);
+        std::vector<S> rasters;
+        size_t bytes_deserialized = S::deserialize(rx_buffer_, rasters);
         q.enqueue_bulk(rasters.begin(), rasters.size()); // use batch enqueue...
-        // rx_buffer_ either should have either no rasters OR the first part of one at this point.
+        rx_buffer_.erase(rx_buffer_.begin(), rx_buffer_.begin() + bytes_deserialized);
 
       } else if (bytes_received < 0) {
         if (++fail_count_ > kFailLimit) {
@@ -88,7 +87,7 @@ class Receiver
   T net_core_;
   ReceiverStatus status_;
   bool stop_rx_;
-  int fail_count_;
+  size_t fail_count_;
   size_t size_;
   std::vector<unsigned char> rx_buffer_;
 };
