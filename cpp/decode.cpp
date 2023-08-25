@@ -11,17 +11,19 @@
 #include <tclap/CmdLine.h>
 
 using SpikeRaster64 = raster::SpikeRaster64;
-using RasterQueue = moodycamel::ConcurrentQueue<raster::SpikeRaster64>;
+using RasterQueue = moodycamel::ConcurrentQueue<SpikeRaster64>;
 using CmdLine = TCLAP::CmdLine;
 using StringArg = TCLAP::ValueArg<std::string>;
 using UShortArg = TCLAP::ValueArg<uint16_t>;
 using ArgException = TCLAP::ArgException;
+using ReceiverStatus = receiver::ReceiverStatus;
+using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, RasterQueue>;
 
 template<typename Q>
 void receive(Q& q)
 {
-  Receiver<LinuxTCPCore, Q> *receiver = new Receiver<LinuxTCPCore, Q>(4096);
-  if (ReceiverStatus::kOkay == receiver->get_status()) {
+  LinuxTCPReceiver *receiver = new LinuxTCPReceiver(4096);
+  if (receiver::ReceiverStatus::kOkay == receiver->get_status()) {
     receiver->receive(q);
   } else {
     delete receiver;

@@ -12,6 +12,7 @@
 
 using SpikeRaster64 = raster::SpikeRaster64;
 
+namespace receiver {
 
 enum class ReceiverStatus {
   kError = -1,
@@ -90,6 +91,8 @@ class Receiver
   size_t fail_count_;
   size_t size_;
   std::vector<unsigned char> rx_buffer_;
+};
+
 };
 
 #endif  // __DECODER_RECEIVER_RECEIVER_H
