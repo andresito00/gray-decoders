@@ -6,7 +6,6 @@
 #include <climits>
 #include <cstdint>
 #include <iterator>
-#include <iostream>
 #include <string.h>
 
 constexpr static std::array<unsigned char, 4> kDelimiter{ 0xEF, 0xBE, 0xAD, 0xDE };
@@ -23,9 +22,7 @@ struct SpikeRaster {
   SpikeRaster(T id, size_t sz) noexcept: id{id}, raster{std::move(std::vector<T>(sz, 0))} {}
   SpikeRaster(T id, std::vector<T>&& raster) noexcept: id{id}, raster{std::move(raster)} {}
   SpikeRaster(SpikeRaster& other) noexcept: id{other.id}, raster{other.raster} {}
-  SpikeRaster(SpikeRaster&& other) noexcept: id{-1LU}, raster{{}} {
-    id = other.id;
-    raster = std::move(other.raster);
+  SpikeRaster(SpikeRaster&& other) noexcept: id{other.id}, raster{std::move(other.raster)} {
     other.id = -1LU;
     other.raster = {};
   }
@@ -36,18 +33,17 @@ struct SpikeRaster {
     }
     id = other.id;
     raster = other.raster;
-    other.id = -1LU;
-    other.raster = {};
     return *this;
   }
 
   SpikeRaster& operator=(SpikeRaster&& other) noexcept {
-    if (*this != other) {
-      id = other.id;
-      raster = std::move(other.raster);
-      other.id = -1LU;
-      other.raster = {};
+    if (this == &other) {
+      return *this;
     }
+    id = other.id;
+    raster = std::move(other.raster);
+    other.id = -1LU;
+    other.raster = {};
     return *this;
   }
 
@@ -55,11 +51,11 @@ struct SpikeRaster {
     return id == other.id;
   }
 
-  T get_id() const {
+  T get_id() const noexcept {
     return id;
   }
 
-  size_t raster_size() const {
+  size_t raster_size() const noexcept {
     return raster.size();
   }
 
@@ -86,10 +82,9 @@ struct SpikeRaster {
       std::vector<T> current(raster_bytes / sizeof(T), 0);
       const unsigned char *raster_start = buff.data() + sizeof(id);
       memcpy(current.data(), raster_start, raster_bytes);
-
       result.emplace_back(SpikeRaster<T>(id, std::move(current)));
 
-      buff.erase(range_start, found + kDelimiter.size());
+      buff.erase(buff.begin(), found + kDelimiter.size());
       range_start = buff.begin();
       range_end = buff.end();
     }
@@ -101,7 +96,5 @@ struct SpikeRaster {
 using SpikeRaster64 = struct SpikeRaster<uint64_t> ;
 
 };
-
-
 
 #endif  // UTIL_UTIL_H_
