@@ -1,6 +1,5 @@
 #ifndef DECODER_RECEIVER_RECEIVER_H_
 #define DECODER_RECEIVER_RECEIVER_H_
-#include <iostream>
 #include <string>
 #include <cstddef>
 #include <vector>

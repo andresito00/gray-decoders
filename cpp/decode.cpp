@@ -1,9 +1,9 @@
 #include <iostream>
 #include <csignal>
-#include <thread>
 #include <chrono>
 #include <memory>
 #include <unistd.h>
+#include <safer_thread.h>
 #include <raster.h>
 #include <receiver.h>
 #include <tcp.h>
@@ -18,9 +18,9 @@ using UShortArg = TCLAP::ValueArg<uint16_t>;
 using ArgException = TCLAP::ArgException;
 using ReceiverStatus = receiver::ReceiverStatus;
 using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, RasterQueue>;
+using SafeThread = sthread::SaferThread;
 
-template<typename Q>
-void receive(Q& q)
+void receive(RasterQueue& q)
 {
   LinuxTCPReceiver *receiver = new LinuxTCPReceiver(4096);
   if (receiver::ReceiverStatus::kOkay == receiver->get_status()) {
@@ -31,20 +31,19 @@ void receive(Q& q)
   }
 }
 
-template<typename Q>
-void decode(Q& q)
+void decode(RasterQueue& q)
 {
   SpikeRaster64 found;
   size_t count = 0;
   while (true) {
     while (!q.try_dequeue(found)) {
     // bug in clang-tidy-12 spaceship operator parsing:
-    //  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
     // workaround:
       std::this_thread::sleep_until(
         std::chrono::system_clock::now() +
         std::chrono::microseconds(256)
-      ); // block this thread here
+      );
     }
     std::cout << "# " << ++count << " ID: " << std::hex << found.id << std::endl;
     for (auto r: found.raster) {
@@ -79,24 +78,13 @@ int main(int argc, char *argv[])
               << std::endl;
   }
 
-  // main routine should eventually be:
-  //  accessible runtime configuration given args/initialization input
-  //  initialize receiver process
   auto raster_queue = RasterQueue();
-  auto decodes = std::thread(decode<RasterQueue>, std::ref(raster_queue));
-  auto receives = std::thread(receive<RasterQueue>, std::ref(raster_queue));
+  auto decodes = SafeThread(std::thread(decode, std::ref(raster_queue)), sthread::Action::kJoin);
+  auto receives = SafeThread(std::thread(receive, std::ref(raster_queue)), sthread::Action::kJoin);
 
   std::cout << "Now executing concurrently...\n" << std::endl;
 
-  // todo: write a logging thread instead of using stdout.
-  // this will ensure we're not trapping into the OS to provide debug output in the middle
-  // of performance critical compute.
-
-  // synchronize threads:
-  decodes.join();   // pauses until second finishes
-  receives.join();  // pauses until first finishes
-
-  //  initialize learner process
+  // Todo: write a logging thread instead of using stdout.
 
   return 0;
 }
