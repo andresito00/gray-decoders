@@ -7,7 +7,7 @@
 static inline void log(std::string file, int line, std::string msg,
                        std::ostream& out = std::cout)
 {
-  out << file << ":" << line << ": " << msg << '\n';
+  out << file << ": " << line << ": " << msg << '\n';
 }
 
 static inline std::string log_str(std::string file, int line, std::string msg)
