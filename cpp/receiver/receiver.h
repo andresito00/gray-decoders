@@ -11,8 +11,8 @@
 
 using SpikeRaster64 = raster::SpikeRaster64;
 
-namespace receiver {
-
+namespace receiver
+{
 enum class ReceiverStatus {
   kError = -1,
   kOkay,
@@ -21,7 +21,7 @@ enum class ReceiverStatus {
 
 constexpr int kFailLimit = 5;
 
-template<class T, class Q, class S = SpikeRaster64>
+template <class T, class Q, class S = SpikeRaster64>
 class Receiver
 {
  public:
@@ -31,10 +31,8 @@ class Receiver
   Receiver& operator=(Receiver&& a) = delete;
   Receiver& operator=(const Receiver& a) = delete;
 
-  explicit Receiver(size_t buffer_size) :
-      stop_rx_(false),
-      fail_count_(0),
-      size_(buffer_size)
+  explicit Receiver(size_t buffer_size)
+      : stop_rx_(false), fail_count_(0), size_(buffer_size)
   {
     // net_core_ = T();
     rx_buffer_.reserve(size_);
@@ -47,15 +45,15 @@ class Receiver
 
   // For now, this member function expects to receive on
   // spike raster structure boundaries. Should be made more robust.
-  ReceiverStatus receive(Q &q) {
+  ReceiverStatus receive(Q& q)
+  {
     status_ = ReceiverStatus::kOkay;
     while (!stop_rx_) {
       size_t populated_bytes = rx_buffer_.size();
       rx_buffer_.resize(size_);
 
       ssize_t bytes_received = net_core_.Receive(
-        rx_buffer_.data() + populated_bytes, size_ - populated_bytes
-      );
+          rx_buffer_.data() + populated_bytes, size_ - populated_bytes);
 
       if (bytes_received > 0) {
         if (static_cast<size_t>(bytes_received) < size_) {
@@ -63,8 +61,10 @@ class Receiver
         }
         std::vector<S> rasters;
         size_t bytes_deserialized = S::deserialize(rx_buffer_, rasters);
-        q.enqueue_bulk(rasters.begin(), rasters.size()); // use batch enqueue...
-        rx_buffer_.erase(rx_buffer_.begin(), rx_buffer_.begin() + bytes_deserialized);
+        q.enqueue_bulk(rasters.begin(),
+                       rasters.size());  // use batch enqueue...
+        rx_buffer_.erase(rx_buffer_.begin(),
+                         rx_buffer_.begin() + bytes_deserialized);
 
       } else if (bytes_received < 0) {
         if (++fail_count_ > kFailLimit) {
@@ -77,9 +77,7 @@ class Receiver
     return ReceiverStatus::kStopped;
   }
 
-  ReceiverStatus stop(void) {
-    stop_rx_ = true;
-  }
+  ReceiverStatus stop(void) { stop_rx_ = true; }
 
   ReceiverStatus get_status(void) const { return status_; }
 
@@ -92,6 +90,6 @@ class Receiver
   std::vector<unsigned char> rx_buffer_;
 };
 
-};
+};  // namespace receiver
 
 #endif  // __DECODER_RECEIVER_RECEIVER_H

@@ -22,7 +22,7 @@ using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, RasterQueue>;
 
 static constexpr size_t kDefaultRxSize = 4096LU;
 
-void receive(RasterQueue& q)
+void receive(RasterQueue &q)
 {
   LinuxTCPReceiver *receiver = new LinuxTCPReceiver(kDefaultRxSize);
   if (receiver::ReceiverStatus::kOkay == receiver->get_status()) {
@@ -33,14 +33,14 @@ void receive(RasterQueue& q)
   }
 }
 
-void decode(RasterQueue& q)
+void decode(RasterQueue &q)
 {
   SpikeRaster64 found;
   size_t count = 0;
   while (true) {
     q.wait_dequeue(found);
     LOG("# " + std::to_string(++count) + " ID: " + std::to_string(found.id));
-    for (auto r: found.raster) {
+    for (auto r : found.raster) {
       LOG("\t" + std::to_string(r));
     }
   }
@@ -52,10 +52,8 @@ int main(int argc, char *argv[])
   uint16_t port;
   try {
     CmdLine cmd("CLI interface to launch the decoder", ' ', "0.0");
-    StringArg arg_ip("i", "ip", "IP address to bind",
-                                        true, "", "string");
-    UShortArg arg_port("p", "port", "Port to listen on", true,
-                                       8808, "int");
+    StringArg arg_ip("i", "ip", "IP address to bind", true, "", "string");
+    UShortArg arg_port("p", "port", "Port to listen on", true, 8808, "int");
 
     cmd.add(arg_ip);
     cmd.add(arg_port);
@@ -71,8 +69,10 @@ int main(int argc, char *argv[])
   }
 
   auto raster_queue = RasterQueue();
-  auto decodes = SafeThread(std::thread(decode, std::ref(raster_queue)), sthread::Action::kJoin);
-  auto receives = SafeThread(std::thread(receive, std::ref(raster_queue)), sthread::Action::kJoin);
+  auto decodes = SafeThread(std::thread(decode, std::ref(raster_queue)),
+                            sthread::Action::kJoin);
+  auto receives = SafeThread(std::thread(receive, std::ref(raster_queue)),
+                             sthread::Action::kJoin);
 
   LOG("Now executing concurrently...");
   // Todo: write a logging thread instead of using stdout.

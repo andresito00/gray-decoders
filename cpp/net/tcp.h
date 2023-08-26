@@ -6,12 +6,14 @@
 #include <arpa/inet.h>
 #include "net_core.h"
 
-class LinuxTCPCore {
+class LinuxTCPCore
+{
  public:
   LinuxTCPCore();
   ~LinuxTCPCore();
   ssize_t Receive(unsigned char *buffer, size_t num_bytes);
   NetCoreStatus get_status(void);
+
  protected:
  private:
   NetCoreStatus status_;
@@ -29,4 +31,4 @@ class LinuxTCPCore {
   };
 };
 
-#endif // DECODER_NET_TCP_H_
+#endif  // DECODER_NET_TCP_H_
