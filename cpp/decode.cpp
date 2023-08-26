@@ -9,45 +9,20 @@
 #include <raster.h>
 #include <receiver.h>
 #include <tcp.h>
-#include <concurrentqueue.h>
+#include <blockingconcurrentqueue.h>
 #include <tclap/CmdLine.h>
 
 using SpikeRaster64 = raster::SpikeRaster64;
+using RasterQueue = moodycamel::BlockingConcurrentQueue<SpikeRaster64>;
 using CmdLine = TCLAP::CmdLine;
 using StringArg = TCLAP::ValueArg<std::string>;
 using UShortArg = TCLAP::ValueArg<uint16_t>;
 using ArgException = TCLAP::ArgException;
 using ReceiverStatus = receiver::ReceiverStatus;
 using SafeThread = sthread::SaferThread;
+using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, RasterQueue>;
 
-template<typename T>
-class SharedQueue {
-public:
-  template<typename... Args>
-  void enqueue_bulk(Args&&... args) {
-    raster_queue_.enqueue_bulk(std::forward<Args>(args)...);
-    condition_.notify_one();
-  }
-
-  template<typename... Args>
-  bool wait_and_dequeue(Args&&... args) {
-    condition_.wait(lk, [this]{return this->raster_queue_.size_approx() > 0;});
-    auto result = raster_queue_.try_dequeue(std::forward<Args>(args)...);
-    return result;
-  }
-
-  bool size_approx() const {
-    return raster_queue_.size_approx() == 0;
-  }
-
-private:
-  moodycamel::ConcurrentQueue<T> raster_queue_;
-  std::condition_variable condition_;
-};
-
-using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, SharedQueue<SpikeRaster64>>;
-
-void receive(SharedQueue<SpikeRaster64>& q)
+void receive(RasterQueue& q)
 {
   LinuxTCPReceiver *receiver = new LinuxTCPReceiver(4096);
   if (receiver::ReceiverStatus::kOkay == receiver->get_status()) {
@@ -58,16 +33,15 @@ void receive(SharedQueue<SpikeRaster64>& q)
   }
 }
 
-void decode(SharedQueue<SpikeRaster64>& q)
+void decode(RasterQueue& q)
 {
   SpikeRaster64 found;
   size_t count = 0;
   while (true) {
-    if (q.wait_and_dequeue(found)) {
-      std::cout << "# " << ++count << " ID: " << std::hex << found.id << '\n';
-      for (auto r: found.raster) {
-        std::cout << "\t" << std::dec << r << '\n';
-      }
+    q.wait_dequeue(found);
+    std::cout << "# " << ++count << " ID: " << std::hex << found.id << '\n';
+    for (auto r: found.raster) {
+      std::cout << "\t" << std::dec << r << '\n';
     }
   }
 }
@@ -98,7 +72,7 @@ int main(int argc, char *argv[])
               << '\n';
   }
 
-  auto raster_queue = SharedQueue<SpikeRaster64>();
+  auto raster_queue = RasterQueue();
   auto decodes = SafeThread(std::thread(decode, std::ref(raster_queue)), sthread::Action::kJoin);
   auto receives = SafeThread(std::thread(receive, std::ref(raster_queue)), sthread::Action::kJoin);
 
