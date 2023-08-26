@@ -46,7 +46,8 @@ class Receiver
   ReceiverStatus receive(Q& q)
   {
     status_ = ReceiverStatus::kOkay;
-    while (!stop_rx_) {
+    while (!stop_rx_) {  // Can also do && net_core_.get_status() ==
+                         // NetCoreStatus::kOkay
       size_t populated_bytes = rx_buffer_.size();
       rx_buffer_.resize(size_);
 
