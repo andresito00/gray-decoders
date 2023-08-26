@@ -7,12 +7,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <log.h>
 #include "tcp.h"
 #include "net_core.h"
-
-static inline void log(std::string file, int line, char *msg) {
-    std::cout << file << ":" << line << ": " <<  msg << std::endl;
-}
 
 ssize_t LinuxTCPCore::Receive(unsigned char *buffer, size_t num_bytes) {
     // TODO: Use select
@@ -31,8 +28,8 @@ LinuxTCPCore::LinuxTCPCore(void) {
     bind_socket_ = socket(AF_INET, SOCK_STREAM, 0);
 
     if (bind_socket_ == 0) {
-      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
+      throw NetException(LOG_STRING(strerror(errno)));
       return;
     }
 
@@ -40,8 +37,9 @@ LinuxTCPCore::LinuxTCPCore(void) {
     int ret =
         setsockopt(bind_socket_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     if (ret < 0) {
-      log(__FILE__, __LINE__,  strerror(errno));
+
       status_ = NetCoreStatus::kError;
+      throw NetException(LOG_STRING(strerror(errno)));
       return;
     }
 
@@ -53,41 +51,41 @@ LinuxTCPCore::LinuxTCPCore(void) {
     ret =
         bind(bind_socket_, &server_address_alias_, sizeof(server_address_alias_));
     if (ret < 0) {
-      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
+      throw NetException(LOG_STRING(strerror(errno)));
       return;
     }
 
-    log(__FILE__, __LINE__, "Listening...");
+    LOG("Listening...");
     ret = listen(bind_socket_, 1);
     if (ret < 0) {
-      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
+      throw NetException(LOG_STRING(strerror(errno)));
       return;
     }
 
     socklen_t client_addr_len = sizeof(client_address_alias_);
     comm_socket_ = accept(bind_socket_, &client_address_alias_, &client_addr_len);
     if (comm_socket_ < 0) {
-      log(__FILE__, __LINE__,  strerror(errno));
       status_ = NetCoreStatus::kError;
+      throw NetException(LOG_STRING(strerror(errno)));
       return;
     }
-    log(__FILE__, __LINE__, "Socket ready...");
+    LOG("Socket ready...");
     status_ = NetCoreStatus::kOkay;
 }
 
 LinuxTCPCore::~LinuxTCPCore(void) {
     int ret = close(comm_socket_);
     if (ret < 0) {
-        log(__FILE__, __LINE__,  strerror(errno));
         status_ = NetCoreStatus::kError;
+        LOG(strerror(errno));
     }
 
     ret = close(bind_socket_);
     if (ret < 0) {
-        log(__FILE__, __LINE__,  strerror(errno));
         status_ = NetCoreStatus::kError;
+        LOG(strerror(errno));
     }
 }
 

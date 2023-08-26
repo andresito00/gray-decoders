@@ -1,5 +1,5 @@
-#ifndef DECODER_SAFER_THREAD_H_
-#define DECODER_SAFER_THREAD_H_
+#ifndef DECODER_UTIL_SAFER_THREAD_H_
+#define DECODER_UTIL_SAFER_THREAD_H_
 
 #include <thread>
 
@@ -36,4 +36,4 @@ class SaferThread
 
 };  // namespace sthread
 
-#endif  // DECODER_SAFER_THREAD_H_
+#endif  // DECODER_UTIL_SAFER_THREAD_H_

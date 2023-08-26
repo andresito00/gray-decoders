@@ -1,14 +1,12 @@
 #include <iostream>
 #include <csignal>
-#include <chrono>
 #include <memory>
-#include <mutex>
-#include <condition_variable>
 #include <unistd.h>
 #include <safer_thread.h>
 #include <raster.h>
 #include <receiver.h>
 #include <tcp.h>
+#include <log.h>
 #include <blockingconcurrentqueue.h>
 #include <tclap/CmdLine.h>
 
@@ -22,9 +20,11 @@ using ReceiverStatus = receiver::ReceiverStatus;
 using SafeThread = sthread::SaferThread;
 using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, RasterQueue>;
 
+static constexpr size_t kDefaultRxSize = 4096LU;
+
 void receive(RasterQueue& q)
 {
-  LinuxTCPReceiver *receiver = new LinuxTCPReceiver(4096);
+  LinuxTCPReceiver *receiver = new LinuxTCPReceiver(kDefaultRxSize);
   if (receiver::ReceiverStatus::kOkay == receiver->get_status()) {
     receiver->receive(q);
   } else {
@@ -39,9 +39,9 @@ void decode(RasterQueue& q)
   size_t count = 0;
   while (true) {
     q.wait_dequeue(found);
-    std::cout << "# " << ++count << " ID: " << std::hex << found.id << '\n';
+    LOG("# " + std::to_string(++count) + " ID: " + std::to_string(found.id));
     for (auto r: found.raster) {
-      std::cout << "\t" << std::dec << r << '\n';
+      LOG("\t" + std::to_string(r));
     }
   }
 }
@@ -52,10 +52,10 @@ int main(int argc, char *argv[])
   uint16_t port;
   try {
     CmdLine cmd("CLI interface to launch the decoder", ' ', "0.0");
-    StringArg arg_ip("i", "ip", "IP address to bind to",
+    StringArg arg_ip("i", "ip", "IP address to bind",
                                         true, "", "string");
     UShortArg arg_port("p", "port", "Port to listen on", true,
-                                       8080, "int");
+                                       8808, "int");
 
     cmd.add(arg_ip);
     cmd.add(arg_port);
@@ -65,18 +65,16 @@ int main(int argc, char *argv[])
     ip = arg_ip.getValue();
     port = arg_port.getValue();
 
-    std::cout << "Binding to " << ip << ": " << port << '\n';
-
+    LOG("Binding to " + ip + ": " + std::to_string(port));
   } catch (ArgException &e) {
-    std::cerr << "error: " << e.error() << " for arg " << e.argId()
-              << '\n';
+    LOG_ERROR("error: " + e.error() + " for arg " + e.argId());
   }
 
   auto raster_queue = RasterQueue();
   auto decodes = SafeThread(std::thread(decode, std::ref(raster_queue)), sthread::Action::kJoin);
   auto receives = SafeThread(std::thread(receive, std::ref(raster_queue)), sthread::Action::kJoin);
 
-  std::cout << "Now executing concurrently...\n" << '\n';
+  LOG("Now executing concurrently...");
   // Todo: write a logging thread instead of using stdout.
   std::cout << std::flush;
   return 0;

@@ -1,5 +1,5 @@
-#ifndef DATA_RASTER_H_
-#define DATA_RASTER_H_
+#ifndef DECODER_DATA_RASTER_H_
+#define DECODER_DATA_RASTER_H_
 #include <array>
 #include <vector>
 #include <string>
@@ -96,4 +96,4 @@ using SpikeRaster64 = struct SpikeRaster<uint64_t> ;
 
 };
 
-#endif  // UTIL_UTIL_H_
+#endif  // DECODER_DATA_RASTER_H_

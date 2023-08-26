@@ -21,7 +21,7 @@ class LinuxTCPCore {
   int comm_socket_;
   union {
     struct sockaddr_in server_address_;
-    struct sockaddr server_address_alias_; // To avoid old-style casts
+    struct sockaddr server_address_alias_;
   };
   union {
     struct sockaddr_in client_address_;
