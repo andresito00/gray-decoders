@@ -37,6 +37,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 # TODO: -Wlifetime
 
 add_subdirectory(net)
+add_subdirectory(util)
 
 
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
@@ -49,6 +50,7 @@ add_executable(decode ${decoder_src})
 
 target_link_libraries(
   decode
+  util
   net
   pthread
 )

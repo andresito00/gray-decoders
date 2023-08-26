@@ -6,14 +6,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <runtime_config.h>
 #include <log.h>
 #include <net_core.h>
 #include "tcp.h"
 
 LinuxTCPCore::LinuxTCPCore(void)
 {
-  ip_ = "0.0.0.0";
-  port_ = 8808;
+  ip_ = runtimeconfig::get_listen_ip();
+  port_ = runtimeconfig::get_listen_port();
   bind_socket_ = socket(AF_INET, SOCK_STREAM, 0);
 
   if (bind_socket_ == 0) {
