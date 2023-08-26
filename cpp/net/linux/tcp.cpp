@@ -1,4 +1,3 @@
-#include <iostream>
 #include <vector>
 #include <string>
 #include <string.h>
@@ -8,21 +7,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <log.h>
+#include <net_core.h>
 #include "tcp.h"
-#include "net_core.h"
-
-ssize_t LinuxTCPCore::Receive(unsigned char *buffer, size_t num_bytes)
-{
-  // TODO: Use select
-  ssize_t bytes_received = recv(comm_socket_, buffer, num_bytes, 0);
-  if (bytes_received > 0 &&
-      (bytes_received == static_cast<size_t>(bytes_received))) {
-    status_ = NetCoreStatus::kOkay;
-  } else if (bytes_received < 0) {
-    status_ = NetCoreStatus::kError;
-  }
-  return bytes_received;
-}
 
 LinuxTCPCore::LinuxTCPCore(void)
 {
@@ -90,6 +76,19 @@ LinuxTCPCore::~LinuxTCPCore(void)
     status_ = NetCoreStatus::kError;
     LOG(strerror(errno));
   }
+}
+
+ssize_t LinuxTCPCore::receive(unsigned char *buffer, size_t num_bytes)
+{
+  // TODO: Use select
+  ssize_t bytes_received = recv(comm_socket_, buffer, num_bytes, 0);
+  if (bytes_received > 0 &&
+      (bytes_received == static_cast<size_t>(bytes_received))) {
+    status_ = NetCoreStatus::kOkay;
+  } else if (bytes_received < 0) {
+    status_ = NetCoreStatus::kError;
+  }
+  return bytes_received;
 }
 
 NetCoreStatus LinuxTCPCore::get_status(void) { return status_; }

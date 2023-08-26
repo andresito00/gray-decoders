@@ -5,7 +5,6 @@
 #include <string>
 #include <climits>
 #include <cstdint>
-#include <iterator>
 #include <string.h>
 
 namespace raster

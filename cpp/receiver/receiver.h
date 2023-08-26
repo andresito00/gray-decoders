@@ -1,10 +1,8 @@
 #ifndef DECODER_RECEIVER_RECEIVER_H_
 #define DECODER_RECEIVER_RECEIVER_H_
-#include <string>
 #include <cstddef>
 #include <vector>
 #include <array>
-#include <climits>
 #include <string.h>
 #include <raster.h>
 #include <net_core.h>
@@ -52,7 +50,7 @@ class Receiver
       size_t populated_bytes = rx_buffer_.size();
       rx_buffer_.resize(size_);
 
-      ssize_t bytes_received = net_core_.Receive(
+      ssize_t bytes_received = net_core_.receive(
           rx_buffer_.data() + populated_bytes, size_ - populated_bytes);
 
       if (bytes_received > 0) {

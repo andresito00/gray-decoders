@@ -4,14 +4,14 @@
 #include <vector>
 #include <string>
 #include <arpa/inet.h>
-#include "net_core.h"
+#include <net_core.h>
 
 class LinuxTCPCore
 {
  public:
   LinuxTCPCore();
   ~LinuxTCPCore();
-  ssize_t Receive(unsigned char *buffer, size_t num_bytes);
+  ssize_t receive(unsigned char *buffer, size_t num_bytes);
   NetCoreStatus get_status(void);
 
  protected:
