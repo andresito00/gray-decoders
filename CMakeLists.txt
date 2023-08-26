@@ -9,4 +9,3 @@ endif()
 string(REGEX MATCH "([1-9][0-9]*)" L1_CACHE_LINE_SIZE "${CONFIG_L1_CACHE_LINE_SIZE}")
 
 add_subdirectory (cpp)
-
