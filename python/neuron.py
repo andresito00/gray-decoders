@@ -5,13 +5,16 @@ from typing import List, Callable, Generator, Optional
 import uuid
 from stimuli import Stimuli
 
+
 class SpikeDistribution(Enum):
     EXP = 0
     GAMMA = 1
     POISSON = 2
 
+
 class NeuronError(Exception):
     pass
+
 
 class NeuronSimulator:
     def __init__(
@@ -45,7 +48,7 @@ class NeuronSimulator:
         self.preferred_stimulus = preferred_stimulus
 
         # Only needed when tuning.
-        self.k = None # cosine model tuning coefficients
+        self.k = None  # cosine model tuning coefficients
 
     def _get_tuned_rates(self, theta: np.ndarray) -> np.ndarray:
         """
@@ -54,8 +57,9 @@ class NeuronSimulator:
         """
         assert k is not None
         theta = np.rad2deg(theta)
-        return self.k[0][0] + self.k[1][0]*np.sin(theta) + \
-                self.k[2][0]*np.cos(theta)
+        return (
+            self.k[0][0] + self.k[1][0] * np.sin(theta) + self.k[2][0] * np.cos(theta)
+        )
 
     def tune_cosine_model(
         self,
@@ -94,9 +98,7 @@ class NeuronSimulator:
         assert self.rate_func is None
 
         rads = np.radians(dirs)
-        A = np.hstack((
-            np.ones((3, 1), order='F'), np.sin(rads), np.cos(rads)
-        ))
+        A = np.hstack((np.ones((3, 1), order="F"), np.sin(rads), np.cos(rads)))
         self.k = np.linalg.lstsq(A, rates, rcond=None)[0]
         self.preferred_stimulus = np.atan(k[1][0] / k[2][0])
         self.rate_func = self._get_tuned_rates
@@ -104,9 +106,7 @@ class NeuronSimulator:
         return self.k
 
     def assign_rate_func(
-        self,
-        rate_func: Callable[[Stimuli], np.ndarray],
-        preferred_stimulus: Stimuli
+        self, rate_func: Callable[[Stimuli], np.ndarray], preferred_stimulus: Stimuli
     ):
         """
         Assigns the rate function for this neuron if tuning isn't used.
@@ -124,16 +124,17 @@ class NeuronSimulator:
         """
         if self.rate_func is None:
             raise NeuronError(
-                f"No rate function assigned to neuron {self.group}-{self.id}")
+                f"No rate function assigned to neuron {self.group}-{self.id}"
+            )
 
         return self.rate_func(stimuli, self.preferred_stimulus)
 
     def generate_rasters(
         self,
-        spike_rates: np.ndarray, # spikes/s
-        intervals_ms: np.ndarray,   # ms
+        spike_rate_hz: np.ndarray,  # hz
+        intervals_ms: np.ndarray,  # ms
         num_trials: int,
-        start_time: int, # ms
+        start_time: int,  # ms
     ) -> Generator[np.ndarray, None, None]:
         """
         The "workhorse" of the NeuronSimulator class. This one should be optimized to produce.
@@ -144,19 +145,19 @@ class NeuronSimulator:
         The following generates and returns spike rasters by using
         delta-t from a random exponential distribution characterized by...
 
-        :param spike_rates: the firing rate of a neuron
+        :param spike_rates: the firing rate of a neuron in hz
         :param intervals_ms: the duration for each spike rate (1:1 mapping)
         :param num_trials: number of trials (rasters to generate)
         :param start_time: "spike n happens at time start_time + t."
         """
-        with np.errstate(divide='ignore'):
-            betas = 1000/spike_rates # convert s to ms
+        with np.errstate(divide="ignore"):
+            betas = 1000 / spike_rate_hz  # convert s to ms
         duration = np.sum(intervals_ms)
         for i in range(0, num_trials):
             spike_train = []
             prev_t_spike = start_time
             dt = start_time
-            for rate, beta, interval in zip(spike_rates, betas, intervals_ms):
+            for rate, beta, interval in zip(spike_rate_hz, betas, intervals_ms):
                 if rate > 0:
                     while dt <= duration and (dt - prev_t_spike) <= interval:
                         spike_delta = self.rand_func(beta)
