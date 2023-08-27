@@ -8,11 +8,23 @@ It's main functionality is provide users with a way to:
 4. send those packed event arrays using a network protocol to a listening decoding process
 5. TODO: train the weights of an inference model using generated brain activity and corresponding physical stimiulus.
 
+```
+$ python3 nsimulate.py --mode simulate --rates 50 --intervals 2000 --num-trials 100 --rand EXP
+```
+
+
 
 ## Neural Decoding - C++
 1. Receive Spike Rasters on a listening interface
 2. Deserialize and enqueue the raster structs as work in progress
 3. TODO: "Decode" the SpikeRasters using trained weights from Step 5 above and predict and encode the physical stimulus determined by the model.
+
+```
+$ ./decode
+decode.cpp: 71: Binding to 0.0.0.0: 8808
+tcp.cpp: 142: Listening for connection...
+tcp.cpp: 177: Connection accpeted, stream open...
+```
 
 ## Building the project source
 

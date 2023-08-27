@@ -111,6 +111,7 @@ class Receiver
       } else if (bytes_received < 0) {
         if (++fail_count_ > kFailLimit) {
           status_ = ReceiverStatus::kError;
+          rx_buffer_.clear();
           break;
         }
       }
