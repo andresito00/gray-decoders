@@ -1,7 +1,6 @@
 #ifndef DECODER_NET_TCP_H_
 #define DECODER_NET_TCP_H_
 
-#include <vector>
 #include <string>
 #include <arpa/inet.h>
 #include <sys/epoll.h>
@@ -11,18 +10,21 @@ class LinuxTCPCore
 {
  public:
   LinuxTCPCore();
+  LinuxTCPCore(LinuxTCPCore&& other);
+  LinuxTCPCore& operator=(LinuxTCPCore&& other);
   ~LinuxTCPCore();
-  ssize_t receive(unsigned char *buffer, size_t num_bytes) noexcept;
-  NetCoreStatus get_status() const noexcept;
+  ssize_t wait_and_receive(unsigned char* buffer, size_t num_bytes) noexcept;
+  netcore::NetCoreStatus get_status() const noexcept;
+  void wait_for_connection();
 
  private:
   static constexpr size_t kMaxEvents = 10LU;
-  NetCoreStatus status_;
+  netcore::NetCoreStatus status_;
   std::string ip_;
   uint16_t port_;
-  int bind_socket_;
-  int comm_socket_;
-  int epoll_fd_;
+  netcore::file_descriptor_t bind_socket_;
+  netcore::file_descriptor_t comm_socket_;
+  netcore::file_descriptor_t epoll_fd_;
   struct epoll_event ev_;
   struct epoll_event events_[kMaxEvents];
   union {

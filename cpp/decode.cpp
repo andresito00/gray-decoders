@@ -19,17 +19,19 @@ using ArgException = TCLAP::ArgException;
 using ReceiverStatus = receiver::ReceiverStatus;
 using SafeThread = sthread::SaferThread;
 using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, RasterQueue>;
+// using RasterDecoder = decoder::Decoder<DecodeAlgorithm, RandDistribution,
+// RasterQueue>
 
 static constexpr size_t kDefaultRxSize = 4096LU;
 
 void receive(RasterQueue &q)
 {
-  LinuxTCPReceiver *receiver =
-      new LinuxTCPReceiver(runtimeconfig::get_rx_buffer_size());
+  auto receiver =
+      std::make_unique<LinuxTCPReceiver>(runtimeconfig::get_rx_buffer_size());
+  receiver->net_initialize();
   if (receiver::ReceiverStatus::kOkay == receiver->get_status()) {
     receiver->receive(q);
   } else {
-    delete receiver;
     exit(EXIT_FAILURE);
   }
 }
@@ -43,7 +45,7 @@ void decode(RasterQueue &q)
     LOG("# " + std::to_string(++count) + " ID: " + std::to_string(found.id));
     for (auto r : found.raster) {
       LOG("\t" + std::to_string(r));
-      // TODO(andres): Actually do some processing here...
+      // TODO(andres): Actually do some processing here with a RasterDecoder
     }
   }
 }

@@ -13,7 +13,13 @@
 #include <net_core.h>
 #include "tcp.h"
 
-LinuxTCPCore::LinuxTCPCore(void)
+using NetCoreStatus = netcore::NetCoreStatus;
+using NetException = netcore::NetException;
+
+/**
+ * Creates and binds socket
+ */
+LinuxTCPCore::LinuxTCPCore()
 {
   ip_ = runtimeconfig::get_listen_ip();
   port_ = runtimeconfig::get_listen_port();
@@ -41,7 +47,80 @@ LinuxTCPCore::LinuxTCPCore(void)
     status_ = NetCoreStatus::kError;
     throw NetException(LOG_STRING(strerror(errno)));
   }
+  status_ = NetCoreStatus::kClosed;
+}
 
+LinuxTCPCore::LinuxTCPCore(LinuxTCPCore&& other)
+{
+  if (this == &other) {
+    return;
+  }
+  status_ = other.status_;
+  ip_ = other.ip_;
+  port_ = other.port_;
+  bind_socket_ = other.bind_socket_;
+  comm_socket_ = other.comm_socket_;
+  epoll_fd_ = other.epoll_fd_;
+  ev_ = other.ev_;
+
+  other.status_ = NetCoreStatus::kError;
+  other.ip_ = "";
+  other.port_ = 0xFFFF;
+  other.bind_socket_ = netcore::kInvalidFd;
+  other.comm_socket_ = netcore::kInvalidFd;
+  other.epoll_fd_ = netcore::kInvalidFd;
+  other.ev_ = {};
+}
+
+LinuxTCPCore& LinuxTCPCore::operator=(LinuxTCPCore&& other)
+{
+  if (this == &other) {
+    return *this;
+  }
+  status_ = other.status_;
+  ip_ = other.ip_;
+  port_ = other.port_;
+  bind_socket_ = other.bind_socket_;
+  comm_socket_ = other.comm_socket_;
+  epoll_fd_ = other.epoll_fd_;
+  ev_ = other.ev_;
+
+  other.status_ = NetCoreStatus::kError;
+  other.ip_ = "";
+  other.port_ = 0xFFFF;
+  other.bind_socket_ = netcore::kInvalidFd;
+  other.comm_socket_ = netcore::kInvalidFd;
+  other.epoll_fd_ = netcore::kInvalidFd;
+  other.ev_ = {};
+  return *this;
+}
+
+LinuxTCPCore::~LinuxTCPCore()
+{
+  status_ = NetCoreStatus::kClosed;
+  if ((comm_socket_ != netcore::kInvalidFd) && ((comm_socket_) < 0)) {
+    status_ = NetCoreStatus::kError;
+    LOG(strerror(errno));
+  }
+
+  if ((bind_socket_ != netcore::kInvalidFd) && ((bind_socket_) < 0)) {
+    status_ = NetCoreStatus::kError;
+    LOG(strerror(errno));
+  }
+
+  if ((epoll_fd_ != netcore::kInvalidFd) && ((epoll_fd_) < 0)) {
+    status_ = NetCoreStatus::kError;
+    LOG(strerror(errno));
+  }
+}
+
+/**
+ * Waits for an incoming connection and initializes the epoll instance
+ * that we'll use for async commuincation, assigning sockets and events of
+ * interest.
+ */
+void LinuxTCPCore::wait_for_connection()
+{
   if (listen(bind_socket_, 1) < 0) {
     status_ = NetCoreStatus::kError;
     throw NetException(LOG_STRING(strerror(errno)));
@@ -60,7 +139,7 @@ LinuxTCPCore::LinuxTCPCore(void)
     throw NetException(LOG_STRING(strerror(errno)));
   }
 
-  LOG("Listening...");
+  LOG("Listening for connection...");
 
   int nfds = epoll_wait(epoll_fd_, events_, kMaxEvents, -1);
   if (nfds < 0) {
@@ -94,25 +173,17 @@ LinuxTCPCore::LinuxTCPCore(void)
       status_ = NetCoreStatus::kOkay;
     }
   }
-  LOG("Connection accpeted, stream open");
-}
-
-LinuxTCPCore::~LinuxTCPCore(void)
-{
-  int ret = close(comm_socket_);
-  if (ret < 0) {
-    status_ = NetCoreStatus::kError;
-    LOG(strerror(errno));
-  }
-
-  ret = close(bind_socket_);
-  if (ret < 0) {
-    status_ = NetCoreStatus::kError;
-    LOG(strerror(errno));
+  if (status_ == NetCoreStatus::kOkay) {
+    LOG("Connection accpeted, stream open...");
   }
 }
 
-ssize_t LinuxTCPCore::receive(unsigned char *buffer, size_t num_bytes) noexcept
+/**
+ * Sleeps the thread until data is available on the socket.
+ * Reads data into the buffer parameter for later deserialization.
+ */
+ssize_t LinuxTCPCore::wait_and_receive(unsigned char* buffer,
+                                       size_t num_bytes) noexcept
 {
   if (num_bytes == 0) {
     return 0;
@@ -126,6 +197,8 @@ ssize_t LinuxTCPCore::receive(unsigned char *buffer, size_t num_bytes) noexcept
   for (size_t i = 0; i < static_cast<size_t>(nfds); ++i) {
     if (events_[i].data.fd == comm_socket_) {
       curr_received = read(comm_socket_, buffer, num_bytes);
+      // EPOLLET requires that we continue reading from the FD until
+      // EWOULDBLOCK/EAGAIN
       if (curr_received < 0) {
         if (errno == EWOULDBLOCK || errno == EAGAIN) {
           break;

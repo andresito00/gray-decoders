@@ -6,7 +6,6 @@ include_directories(SYSTEM lib/tclap/include/)
 include_directories(SYSTEM lib/concurrentqueue/)
 include_directories(receiver/)
 include_directories(data/)
-include_directories(decoder/)
 include_directories(util/)
 include_directories(net/)
 

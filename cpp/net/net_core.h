@@ -4,6 +4,13 @@
 #include <string>
 #include <stdexcept>
 
+namespace netcore
+{
+
+using file_descriptor_t = int;
+
+static constexpr file_descriptor_t kInvalidFd = -1;
+
 enum class NetCoreStatus {
   kError = -1,
   kOkay,
@@ -23,5 +30,7 @@ class NetException : public std::runtime_error
  private:
   std::string message_;
 };
+
+};  // namespace netcore
 
 #endif  // DECODER_NET_NET_CORE_H_
