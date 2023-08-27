@@ -17,7 +17,7 @@ using StringArg = TCLAP::ValueArg<std::string>;
 using UShortArg = TCLAP::ValueArg<uint16_t>;
 using ArgException = TCLAP::ArgException;
 using ReceiverStatus = receiver::ReceiverStatus;
-using SafeThread = sthread::SaferThread;
+using SaferThread = sthread::SaferThread;
 using LinuxTCPReceiver = receiver::Receiver<LinuxTCPCore, RasterQueue>;
 // using RasterDecoder = decoder::Decoder<DecodeAlgorithm, RandDistribution,
 // RasterQueue>
@@ -78,13 +78,13 @@ int main(int argc, char *argv[])
   runtimeconfig::set_listen_port(port);
 
   auto raster_queue = RasterQueue();
-  auto decodes = SafeThread(std::thread(decode, std::ref(raster_queue)),
-                            sthread::Action::kJoin);
-  auto receives = SafeThread(std::thread(receive, std::ref(raster_queue)),
+  auto decodes = SaferThread(std::thread(decode, std::ref(raster_queue)),
                              sthread::Action::kJoin);
+  auto receives = SaferThread(std::thread(receive, std::ref(raster_queue)),
+                              sthread::Action::kJoin);
 
-  LOG("Now executing concurrently...");
-  // Todo: write a logging thread instead of using stdout.
+  // Todo: write a logging thread or dispatch log tasks to write files
+  // instead of using stdout.
   std::cout << std::flush;
   return 0;
 }

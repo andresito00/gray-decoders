@@ -100,17 +100,17 @@ LinuxTCPCore::~LinuxTCPCore()
   status_ = NetCoreStatus::kClosed;
   if ((comm_socket_ != netcore::kInvalidFd) && ((comm_socket_) < 0)) {
     status_ = NetCoreStatus::kError;
-    LOG(strerror(errno));
+    LOG_ERROR(strerror(errno));
   }
 
   if ((bind_socket_ != netcore::kInvalidFd) && ((bind_socket_) < 0)) {
     status_ = NetCoreStatus::kError;
-    LOG(strerror(errno));
+    LOG_ERROR(strerror(errno));
   }
 
   if ((epoll_fd_ != netcore::kInvalidFd) && ((epoll_fd_) < 0)) {
     status_ = NetCoreStatus::kError;
-    LOG(strerror(errno));
+    LOG_ERROR(strerror(errno));
   }
 }
 
