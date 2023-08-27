@@ -30,15 +30,6 @@ LinuxTCPCore::LinuxTCPCore(void)
     status_ = NetCoreStatus::kError;
     throw NetException(LOG_STRING(strerror(errno)));
   }
-  // int flags = fcntl(bind_socket_, F_GETFL);
-  // if (flags < 0) {
-  //   status_ = NetCoreStatus::kError;
-  //   throw NetException(LOG_STRING(strerror(errno)));
-  // }
-  // if (fcntl(bind_socket_, F_SETFL, flags | O_NONBLOCK) < 0) {
-  //   status_ = NetCoreStatus::kError;
-  //   throw NetException(LOG_STRING(strerror(errno)));
-  // }
 
   server_address_.sin_family = AF_INET;
   server_address_.sin_port = htons(port_);
@@ -87,6 +78,13 @@ LinuxTCPCore::LinuxTCPCore(void)
         status_ = NetCoreStatus::kError;
         throw NetException(LOG_STRING(strerror(errno)));
       }
+      // We'd like our socket to be non-blocking.
+      int flags = fcntl(comm_socket_, F_GETFL);
+      if (fcntl(comm_socket_, F_SETFL, flags | O_NONBLOCK) < 0) {
+        status_ = NetCoreStatus::kError;
+        throw NetException(LOG_STRING(strerror(errno)));
+      }
+      ev_.events = EPOLLIN | EPOLLET;
       ev_.events = EPOLLIN;
       ev_.data.fd = comm_socket_;
       if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, comm_socket_, &ev_) < 0) {
@@ -94,9 +92,9 @@ LinuxTCPCore::LinuxTCPCore(void)
         throw NetException(LOG_STRING(strerror(errno)));
       }
       status_ = NetCoreStatus::kOkay;
-      LOG("comm_socket_ added with epoll_ctl...");
     }
   }
+  LOG("Connection accpeted, stream open");
 }
 
 LinuxTCPCore::~LinuxTCPCore(void)
@@ -124,15 +122,24 @@ ssize_t LinuxTCPCore::receive(unsigned char *buffer, size_t num_bytes) noexcept
     status_ = NetCoreStatus::kError;
   }
   ssize_t bytes_received = 0;
+  ssize_t curr_received = 0;
   for (size_t i = 0; i < static_cast<size_t>(nfds); ++i) {
     if (events_[i].data.fd == comm_socket_) {
-      bytes_received = recv(comm_socket_, buffer, num_bytes, 0);
-      if (bytes_received < 0) {
-        status_ = NetCoreStatus::kError;
+      curr_received = read(comm_socket_, buffer, num_bytes);
+      if (curr_received < 0) {
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+          break;
+        } else {
+          status_ = NetCoreStatus::kError;
+          return -1;
+        }
+      } else {
+        buffer += curr_received;
+        bytes_received += curr_received;
       }
-      status_ = NetCoreStatus::kOkay;
     }
   }
+  status_ = NetCoreStatus::kOkay;
   return bytes_received;
 }
 
