@@ -76,9 +76,8 @@ struct SpikeRaster {
   static size_t deserialize(const std::vector<unsigned char>& buff,
                             std::vector<SpikeRaster<T>>& result)
   {
-    // todo: read up on better c++ deserialization patterns... consider
-    // moving out of struct. This is also assuming well-behaved input from
-    // the network. Needs more sanitizing.
+    // TODO: use a header to deserialize expected number of events and redesign
+    // to copy directly into queue...
     auto delim_start = kDelimiter.begin();
     auto delim_end = kDelimiter.end();
     auto range_start = buff.begin();
@@ -88,6 +87,8 @@ struct SpikeRaster {
     while ((found = std::search(range_start, range_end, delim_start,
                                 delim_end)) != range_end) {
       // deserialize the id
+      // TODO: use copy_n to get rid of this strict aliasing violation
+      // as we cannot guarantee alignment
       auto id = *(T*)buff.data();
       range_start += sizeof(id);
 

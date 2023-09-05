@@ -191,9 +191,14 @@ ssize_t LinuxTCPCore::wait_and_receive(unsigned char* buffer,
   int nfds = epoll_wait(epoll_fd_, events_, kMaxEvents, -1);
   if (nfds < 0) {
     status_ = NetCoreStatus::kError;
+    return 0;
   }
   ssize_t bytes_received = 0;
   ssize_t curr_received = 0;
+
+  // TODO: remove for loop as we don't expect to receive data
+  // on multiple sockets yet.
+  // BUG: Not handling delimiter + 7 bytes corner case
   for (size_t i = 0; i < static_cast<size_t>(nfds); ++i) {
     if (events_[i].data.fd == comm_socket_) {
       curr_received = read(comm_socket_, buffer, num_bytes);
